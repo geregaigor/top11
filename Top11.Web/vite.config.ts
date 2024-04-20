@@ -1,6 +1,23 @@
-export default {
+import { fileURLToPath, URL } from 'node:url';
+
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import vueJsx from '@vitejs/plugin-vue-jsx';
+import VueDevTools from 'vite-plugin-vue-devtools';
+
+export default defineConfig({
+    plugins: [
+        vue(),
+        vueJsx(),
+        VueDevTools(),
+    ],
+    resolve: {
+        alias: {
+        '@': fileURLToPath(new URL('./Assets', import.meta.url))
+        }
+    },
     appType: 'custom',
-    root: 'Assets',
+  root: 'ClientApp',
     build: {
         manifest: true,
         outDir: '../dist',
@@ -8,7 +25,7 @@ export default {
         assetsDir: '',
         rollupOptions: {
             input: {
-                main: 'Assets/main.js',
+            main: 'ClientApp/main.ts',
             },
             output: {
                 entryFileNames: '[name].js',
@@ -24,4 +41,4 @@ export default {
             clientPort: 5173
         }
     }
-}
+});
