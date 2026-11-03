@@ -4,32 +4,29 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<SpaRoot>ClientApp\</SpaRoot>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Vite.AspNetCore" Version="2.0.0" />
+		<PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+		<PackageReference Include="Mapster" Version="7.4.0" />
+		<PackageReference Include="MediatR" Version="12.4.1" />
+		<PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="8.0.8" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.8" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.8">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Vite.AspNetCore" Version="2.1.2" />
+		<PackageReference Include="Microsoft.TypeScript.MSBuild" Version="5.6.2">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 
-	<!-- Copy `wwwroot` and `dist` -->
-	<ItemGroup>
-		<None Include="wwwroot/**" CopyToPublishDirectory="PreserveNewest" />
-		<None Include="dist/**" CopyToPublishDirectory="PreserveNewest" />
-	</ItemGroup>
-
-	<!-- Don't copy npm files -->
-	<ItemGroup>
-		<Content Update="package-lock.json" CopyToPublishDirectory="Never" />
-		<Content Update="package.json" CopyToPublishDirectory="Never" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="dist\" />
-		<Folder Include="wwwroot\" />
-	</ItemGroup>
-
-	<Target Name="ViteBuild" BeforeTargets="BeforeBuild" Condition=" '$(Configuration)' == 'Release' ">
-		<Exec Command="npm ci" />
-		<Exec Command="npm run build" />
+	<Target Name="ViteBuild" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Release' ">
+		<Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
+		<Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
 	</Target>
 
 </Project>

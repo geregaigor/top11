@@ -1,3 +1,145 @@
-﻿body {
-    font-size: 16px;
+﻿/*** Tailwind (без preflight, поки є Vuetify/naive-ui; потім замінити на @import "tailwindcss";) ***/
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*** shadcn-vue: токени теми. .dark = палітра Top11 (див. main.ts) ***/
+:root {
+    --radius: 0.5rem;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.141 0.005 285.823);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.141 0.005 285.823);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.141 0.005 285.823);
+    --primary: rgb(119 107 231);
+    --primary-hover: rgb(151 141 236);
+    --primary-active: rgb(90 75 226);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.967 0.001 286.375);
+    --secondary-foreground: oklch(0.21 0.006 285.885);
+    --muted: oklch(0.967 0.001 286.375);
+    --muted-foreground: oklch(0.552 0.016 285.938);
+    --accent: oklch(0.967 0.001 286.375);
+    --accent-foreground: oklch(0.21 0.006 285.885);
+    --destructive: rgb(246 78 98);
+    --border: oklch(0.92 0.004 286.32);
+    --input: oklch(0.92 0.004 286.32);
+    --ring: rgb(119 107 231);
+}
+
+.dark {
+    --background: rgb(39 39 47);
+    --foreground: rgb(255 255 255 / 0.87);
+    --card: rgb(56 56 67);
+    --card-foreground: rgb(255 255 255 / 0.87);
+    --popover: rgb(56 56 67);
+    --popover-foreground: rgb(255 255 255 / 0.87);
+    --primary: rgb(119 107 231);
+    --primary-hover: rgb(151 141 236);
+    --primary-active: rgb(90 75 226);
+    --primary-foreground: rgb(255 255 255);
+    --secondary: rgb(255 255 255 / 0.08);
+    --secondary-foreground: rgb(255 255 255 / 0.87);
+    --muted: rgb(255 255 255 / 0.06);
+    --muted-foreground: rgb(255 255 255 / 0.6);
+    --accent: rgb(119 107 231 / 0.16);
+    --accent-foreground: rgb(255 255 255);
+    --destructive: rgb(246 78 98);
+    --border: rgb(255 255 255 / 0.1);
+    --input: rgb(255 255 255 / 0.15);
+    --ring: rgb(151 141 236);
+}
+
+@theme inline {
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-hover: var(--primary-hover);
+    --color-primary-active: var(--primary-active);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+}
+
+/* без preflight рамки не мають кольору за замовчуванням — задаємо тільки колір, не ширину */
+@layer base {
+    *, ::before, ::after {
+        border-color: var(--color-border);
+    }
+}
+
+.my-input2 .v-input__control .v-input__slot {
+    min-height: auto !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+
+
+
+
+
+.skill-component {
+    background-color: green;
+}
+
+/*** skill-checkbox ***/
+
+.skill-checkbox .v-selection-control,
+.skill-checkbox .v-selection-control__input,
+.skill-checkbox .v-selection-control__wrapper,
+.skill-checkbox {
+    min-height: 24px !important;
+    min-width: 24px !important;
+    max-height: 24px !important;
+    max-width: 24px !important;
+}
+
+/*** skill-input ***/
+
+.skill-input input {
+    padding: 0px;
+    min-height: auto;
+}
+
+.skill-input .v-input__prepend,
+.skill-input .v-input__details {
+    display: none;    
+}
+
+.skill-input .v-btn--icon {
+    max-width: 24px;    
+}
+
+.skill-input {
+    max-width: 100px;
+}
+
+.test-input {
+    text-align: right;
+    max-width: 200px;
+}
+
+.text-nowrap {
+    white-space: nowrap;
 }

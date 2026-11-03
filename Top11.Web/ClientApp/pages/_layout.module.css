@@ -1,0 +1,49 @@
+/* Кнопка «Зберегти зміни» — зверху під app bar, поверх меню і контенту */
+.saveBar {
+    position: fixed;
+    top: calc(var(--v-layout-top, 64px) + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1010;
+    pointer-events: none;
+}
+
+.saveBarSpacer {
+    height: 52px;
+}
+
+.saveBarBtn {
+    pointer-events: auto;
+    min-width: 220px;
+    height: 40px;
+    text-transform: capitalize;
+    /* ghost прозорий — підкладаємо фон, щоб кнопку було видно поверх контенту */
+    background-color: rgba(24, 24, 28, 0.92) !important;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.saveBarAnim {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.saveBarHidden {
+    opacity: 0;
+    transform: translate(-50%, -16px);
+}
+
+@media (max-width: 599px) {
+    .saveBar {
+        left: 12px;
+        right: 12px;
+        transform: none;
+    }
+
+    .saveBarBtn {
+        width: 100%;
+    }
+
+    .saveBarHidden {
+        transform: translateY(-16px);
+    }
+}

@@ -1,0 +1,380 @@
+﻿/* Стилі для components/player.component.tsx */
+
+/*** Шапка гравця ***/
+
+.playerHeader {
+    padding: 4px 8px 8px;
+}
+
+.playerTitle {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+}
+
+.playerActions {
+    display: flex;
+    flex: 0 0 auto;
+    margin-left: 4px;
+}
+
+.playerName {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.playerMenu {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/*** Секція «Гравець» ***/
+
+.overview {
+    margin: 4px 4px 0;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.overviewForm {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 24px;
+}
+
+.overviewForm :global(.n-form-item) {
+    margin-right: 0 !important;
+}
+
+.overviewForm :global(.n-form-item-label) {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.overviewName {
+    flex: 1 1 240px;
+    max-width: 380px;
+}
+
+.overviewTier {
+    flex: 0 0 auto;
+}
+
+.overviewTierInput {
+    width: 190px;
+}
+
+.rankOption {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rankIcon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    object-fit: contain;
+}
+
+.rankBonus {
+    opacity: 0.6;
+}
+
+/*** Сітка карток (скіли / тренування) ***/
+
+.panelGrid {
+    /* !important — перебиває inline display:flex від NFlex */
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    gap: 4px !important;
+    padding: 4px;
+}
+
+.panelCard {
+    --n-border-color: rgba(255, 255, 255, 0.06) !important;
+    border-radius: 6px !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    white-space: normal;
+    background-color: transparent;
+}
+
+.cardHeader {
+    background-color: #282832;
+}
+
+/*** Рядок скіла ***/
+
+.skillRow {
+    width: 100%;
+    align-items: center;
+    white-space: nowrap;
+    border-radius: 3px;
+}
+
+/* головний скіл: приглушений зелений */
+.skillMain {
+    background: rgba(13, 222, 156, 0.28);
+}
+
+/* скіл >= 340 */
+.skillOverflow {
+    background: rgba(246, 78, 98, 0.18);
+}
+
+.skillLabel {
+    cursor: pointer;
+    user-select: none;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.skillNum {
+    width: 80px;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+/*** Заголовок картки тренування ***/
+
+.trainHeader {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 2px;
+}
+
+.trainName {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trainCtrl {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/*** Прокачка ***/
+
+.pumping {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 8px;
+}
+
+.pumpingHead {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+
+.pumpingTarget {
+    width: 110px;
+}
+
+.pumpingPlan {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 4px;
+}
+
+.pumpingPlanRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.pumpingNum {
+    flex: 0 0 auto;
+    min-width: 1.6em;
+    opacity: 0.6;
+    font-variant-numeric: tabular-nums;
+}
+
+.pumpingName {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pumpingAvg {
+    white-space: nowrap;
+    font-size: 0.85em;
+}
+
+.pumpingPlanRow b {
+    color: rgb(13, 222, 156);
+}
+
+.pumpingSectionTitle {
+    margin-top: 6px;
+    font-weight: 600;
+    font-size: 1.05em;
+}
+
+.pumpingField {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.pumpingFieldLabel {
+    font-weight: 500;
+}
+
+.pumpingHint {
+    font-size: 0.85em;
+    line-height: 1.35;
+}
+
+.pumpingHelp {
+    margin: 0;
+    padding-left: 18px;
+    line-height: 1.5;
+    font-size: 0.9em;
+}
+
+/* картки результату — як картки скілів, але тільки для читання */
+.pumpingCard {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pumpingRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 6px;
+    min-height: 26px;
+    border-radius: 3px;
+}
+
+.pumpingRow .skillLabel {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.pumpingValues {
+    flex: 0 0 auto;
+    margin-left: auto;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.pumpingBefore {
+    opacity: 0.55;
+    margin-right: 2px;
+    font-size: 0.9em;
+}
+
+/*** Mobile: 3 картки в ряд ***/
+
+@media (max-width: 600px) {
+    .panelGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .panelCard,
+    .panelCard :global(.n-text),
+    .panelCard :global(.n-ellipsis),
+    .panelCard :global(.n-input__input-el),
+    .panelCard :global(.n-button) {
+        font-size: 11px !important;
+    }
+
+    .panelCard :global(.n-card__content) {
+        margin: 2px !important;
+    }
+
+    .pumpingRow {
+        padding: 2px 3px;
+        gap: 3px;
+    }
+
+    .pumpingBefore {
+        margin-right: 1px;
+        font-size: 1em;
+    }
+
+    .panelCard :global(.n-checkbox) {
+        --n-size: 12px !important;
+    }
+
+    .skillRow:global(.px-1) {
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+    }
+
+    .skillRow :global(.pl-1) {
+        padding-left: 2px !important;
+    }
+
+    .panelGrid {
+        gap: 3px !important;
+        padding: 3px;
+    }
+
+    /* число без кнопок −/+ */
+    .skillNum {
+        width: 36px;
+    }
+
+    .skillNum :global(.n-input-wrapper) {
+        padding: 0 2px !important;
+    }
+
+    .skillNum :global(.n-input__input-el) {
+        text-align: center;
+    }
+
+    .skillNum :global(.n-input__suffix) {
+        display: none !important;
+    }
+
+    /* заголовок тренування: назва зверху, під нею [✓  − 53.3 +] */
+    .trainHeader {
+        flex-wrap: wrap;
+        row-gap: 0;
+    }
+
+    .trainName {
+        order: -1;
+        flex-basis: 100%;
+        white-space: normal !important;
+        line-height: 1.15;
+        padding-top: 2px;
+    }
+
+    .trainCtrl {
+        margin-left: auto;
+        gap: 2px;
+    }
+
+    .trainCtrl :global(.n-button) {
+        padding: 0 3px !important;
+    }
+}

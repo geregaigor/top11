@@ -252,4 +252,6 @@ WiX.Toolset.DummyFile.txt
 GitHubVS.sln.DotSettings
 
 #Top11.Web
-Top11.Web/dist
+wwwroot
+node_modules
+appsettings.*.json

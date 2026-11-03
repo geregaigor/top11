@@ -1,0 +1,9 @@
+# git зберігає текстові файли з LF, на Windows видає з CRLF
+* text=auto
+
+# бінарні не чіпаємо
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
