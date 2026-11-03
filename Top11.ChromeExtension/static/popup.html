@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<style>
+  body { font: 13px system-ui, sans-serif; width: 680px; margin: 12px; background: #10141c; color: #e6e9ef; }
+  h1 { font-size: 14px; margin: 0 0 10px; }
+  h1 small { opacity: .5; font-weight: 400; }
+  .settings { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
+  label { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; gap: 6px; }
+  .range { display: flex; align-items: center; gap: 4px; }
+  input[type=number] { width: 52px; background: #1d2330; color: inherit; border: 1px solid #333c4f; border-radius: 4px; padding: 3px 5px; }
+  input[type=checkbox] { width: 16px; height: 16px; accent-color: #2fa84f; }
+  button { width: 100%; margin-top: 8px; padding: 7px; border: 0; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  #toggle.start { background: #2fa84f; color: #fff; }
+  #toggle.stop { background: #c43c3c; color: #fff; }
+  .sec { background: #262e3d; color: #cfd6e3; }
+  .row { display: flex; gap: 6px; }
+  .row button { flex: 1; }
+  #status { margin-top: 8px; font-size: 12px; opacity: .8; }
+  #scan { margin-top: 10px; font-size: 12px; }
+  #scan .meta { opacity: .7; margin-bottom: 6px; }
+  #scan .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  button.small { width: auto; margin: 0; padding: 3px 8px; font-size: 11px; }
+  #scan .scroll { max-height: 300px; overflow-y: auto; }
+  #scan table { width: 100%; table-layout: fixed; }
+  #scan th.pos { width: 110px; }
+  #scan th.n { width: 50px; text-align: right; }
+  #scan th.price { width: 70px; }
+  #scan th.c { width: 28px; text-align: center; }
+  #scan td.c { text-align: center; }
+  #scan td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #scan details { margin: 0 0 10px; }
+  #scan details summary { opacity: 1; }
+  #scan th { text-align: left; font-weight: 600; opacity: .6; padding: 2px 4px; }
+  #scan tr.match td { background: #1f4d2c; }
+  #scan table { width: 100%; border-collapse: collapse; }
+  #scan td { padding: 3px 4px; border-top: 1px solid #262e3d; }
+  #scan td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  details { margin-top: 8px; font-size: 12px; }
+  summary { cursor: pointer; opacity: .7; }
+</style>
+</head>
+<body>
+  <h1>Top11 Auction Watcher <small id="ver"></small></h1>
+  <div class="settings">
+  <label>Вік <span class="range"><input id="minAge" type="number" min="16" max="40"> – <input id="maxAge" type="number" min="16" max="40"></span></label>
+  <label>Якість <span class="range"><input id="minQuality" type="number" min="0" max="300"> – <input id="maxQuality" type="number" min="0" max="300"></span></label>
+  <label>Без спецуміння <input id="noSpecial" type="checkbox"></label>
+  <label>Тільки 1 амплуа <input id="singlePosition" type="checkbox"></label>
+  <label>Оновлювати кожні, с <input id="intervalSec" type="number" min="20" max="3600"></label>
+  </div>
+  <button id="toggle" class="start">Старт аукціон</button>
+  <div class="row">
+    <button id="scanNow" class="sec">Оновити зараз</button>
+    <button id="beep" class="sec">Тест звуку</button>
+  </div>
+  <details>
+    <summary>Калібрування якості / дебаг</summary>
+    <label>qZero <input id="qZero" type="number" step="1"></label>
+    <label>qPerPct <input id="qPerPct" type="number" step="0.01"></label>
+    <button id="dump" class="sec">Скачати дамп фреймів</button>
+  </details>
+  <div id="status"></div>
+  <div id="scan">
+    <div class="meta" id="scanMeta"></div>
+    <details id="currentBox">
+      <summary><b>Поточні (<span id="currentCount">0</span>)</b></summary>
+      <div class="scroll"><table class="current"><thead><tr><th>Ім'я</th><th class="pos">Амп</th><th class="n">Вік</th><th class="n">Як.</th><th class="n price">Ціна</th><th class="n price" title="Друга сума (поле 27)">Ц2</th><th class="n" title="Коефіцієнт лота (поле 25)">К</th><th class="c" title="Спецуміння">С</th><th class="c" title="Ігровий стиль">Ст</th></tr></thead><tbody id="current"></tbody></table></div>
+    </details>
+    <div class="head"><b>Знайдені (<span id="historyCount">0</span>)</b><span><button id="copyAll" class="sec small">Копіювати все</button> <button id="clearHistory" class="sec small">Очистити</button></span></div>
+    <div class="scroll"><table><thead><tr><th>Ім'я</th><th class="pos">Амп</th><th class="n">Вік</th><th class="n">Як.</th><th class="n price">Ціна</th><th class="n price" title="Друга сума (поле 27)">Ц2</th><th class="n" title="Коефіцієнт лота (поле 25)">К</th><th class="c" title="Ігровий стиль">Ст</th></tr></thead><tbody id="history"></tbody></table></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

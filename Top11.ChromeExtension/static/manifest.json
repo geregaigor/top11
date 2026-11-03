@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Top11 Auction Watcher",
+  "version": "0.6.0",
+  "description": "Відстежує гравців на аукціоні Top Eleven за віком і якістю.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://www.topeleven.com/*"],
+  "action": { "default_popup": "popup.html", "default_title": "Top11 Auction" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.topeleven.com/play/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.topeleven.com/play/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    }
+  ]
+}
