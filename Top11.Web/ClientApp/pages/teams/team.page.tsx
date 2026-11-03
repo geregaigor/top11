@@ -4,6 +4,7 @@ import { VBtn, VCard, VCardActions, VCardTitle, VContainer, VForm, VTextField } 
 import { useTeamsStore } from "../../stores/teams.store";
 import { fieldPlayerSkills1, fieldPlayerSkills2, goalkeeperSkills1, goalkeeperSkills2, physicalSkills, type Player, type Team } from "../../types";
 import { PlayerComponent } from "../../components/player.component";
+import { ImportSquadButton } from "../../components/import.squad.component";
 import { MdiIcon } from "../../components/mdi.icon";
 import { mdiAccountPlus, mdiBatteryCharging, mdiDeleteOutline, mdiMonitor } from "@mdi/js";
 import styles from "./team.page.module.css";
@@ -38,6 +39,7 @@ export const TeamPage = defineComponent({
         <div class={styles.group}>
           <AddPlayer teamId={team.id} />
           <AddGoolkeeper teamId={team.id} />
+          <ImportSquadButton team={team} />
         </div>
 
         <div class={styles.divider} />

@@ -90,6 +90,12 @@ toggle.onclick = async () => {
 $('scanNow').onclick = () => void send('scanNow');
 $('beep').onclick = () => void send('beep');
 $('dump').onclick = () => void send('dump');
+async function openViewer(view: 'squad' | 'traffic'): Promise<void> {
+  const tab = await gameTab();
+  await chrome.tabs.create({ url: chrome.runtime.getURL('viewer.html') + (tab?.id != null ? `?tab=${tab.id}` : '') + `#${view}` });
+}
+$('traffic').onclick = () => void openViewer('traffic');
+$('squad').onclick = () => void openViewer('squad');
 
 chrome.storage.onChanged.addListener(changes => {
   if ('lastScan' in changes) renderScan(changes.lastScan?.newValue as ScanResult | undefined);

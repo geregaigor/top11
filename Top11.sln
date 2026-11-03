@@ -5,6 +5,8 @@ VisualStudioVersion = 17.9.34622.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Top11.Web", "Top11.Web\Top11.Web.csproj", "{8C95225D-963E-446A-9817-F167D37FCD26}"
 EndProject
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "Top11.ChromeExtension", "Top11.ChromeExtension\Top11.ChromeExtension.esproj", "{6E1B5C2A-4F7D-4B8E-9C3A-2D5F8A1B7E40}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B2B2F62B-79D8-472A-8B33-282E4F5343C8}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
@@ -21,6 +23,8 @@ Global
 		{8C95225D-963E-446A-9817-F167D37FCD26}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8C95225D-963E-446A-9817-F167D37FCD26}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8C95225D-963E-446A-9817-F167D37FCD26}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E1B5C2A-4F7D-4B8E-9C3A-2D5F8A1B7E40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E1B5C2A-4F7D-4B8E-9C3A-2D5F8A1B7E40}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

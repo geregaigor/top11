@@ -157,7 +157,7 @@ const PlayerSkillComponent = defineComponent({
       <NInputGroup class={rowClass.value}>
         <NCheckbox tabindex={-1} size="small" focusable={false} class={['n-checkbox--show-label', styles.skillMainCheck]} v-model:checked={playerSkill.isMain} />
         <NEllipsis class={['pl-1', styles.skillLabel]} onClick={() => playerSkill.isMain = !playerSkill.isMain}>{translateSkill(props.skill)}</NEllipsis>
-        <NInputNumber class={styles.skillNum} v-model:value={skillValue.value} max={999} min={-100} size="tiny" inputProps={{ enterKeyHint: "done" }} />
+        <NInputNumber class={styles.skillNum} v-model:value={skillValue.value} max={999} min={-999} size="tiny" inputProps={{ enterKeyHint: "done" }} />
         <NCheckbox v-show={props.showTierUp} tabindex={-1} size="small" class="pl-1 n-checkbox--show-label" focusable={false} v-model:checked={playerSkill.isTierUp} />
       </NInputGroup>
   }

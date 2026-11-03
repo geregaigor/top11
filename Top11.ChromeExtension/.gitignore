@@ -1,3 +1,6 @@
 node_modules/
 dist/
 .build-number
+obj/
+bin/
+*.esproj.user

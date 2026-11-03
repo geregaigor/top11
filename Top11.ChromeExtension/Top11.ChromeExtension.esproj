@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.1184077">
+  <PropertyGroup>
+    <!-- F5 / Start: перезбірка при змінах -->
+    <StartupCommand>npm install --no-audit --no-fund &amp;&amp; npm run watch</StartupCommand>
+    <!-- Build: npm run build -> dist/ (Load unpacked у chrome://extensions) -->
+    <BuildCommand>npm run build</BuildCommand>
+    <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
+    <ShouldRunNpmInstall>true</ShouldRunNpmInstall>
+    <DefaultItemExcludes>$(DefaultItemExcludes);dist\**;node_modules\**;.build-number</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

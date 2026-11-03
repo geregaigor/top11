@@ -2,12 +2,14 @@
 import { decodeFrame, flatten, FrameType, type DecodedFrame } from './proto';
 import { CMD_AUCTION_LIST, matches, parseAuctionList } from './auction';
 import { openAuctions } from './navigator';
+import { parseSquad } from './squad';
 import {
   BRIDGE_SRC, DEFAULT_SETTINGS, PAGE_SRC,
-  type AuctionPlayer, type BridgeMessage, type PageMessage, type Settings,
+  type AuctionPlayer, type BridgeMessage, type FrameDTO, type FramesReply, type PageMessage, type Settings,
 } from '../shared/messages';
 
 interface Frame {
+  id: number;
   ts: number;
   dir: 'in' | 'out';
   len: number;
@@ -15,7 +17,10 @@ interface Frame {
   dec: DecodedFrame | null;
 }
 
-const MAX_FRAMES = 3000;
+const MAX_FRAMES = 10000;
+/** Скільки кадрів віддавати переглядачу за один запит */
+const FRAMES_CHUNK = 1500;
+let nextFrameId = 0;
 
 const state = {
   running: false,
@@ -33,7 +38,7 @@ function record(dir: Frame['dir'], data: unknown): void {
   const push = (u8: Uint8Array) => {
     let dec: DecodedFrame | null = null;
     try { dec = decodeFrame(u8); } catch { /* ignore */ }
-    const fr: Frame = { ts: Date.now(), dir, len: u8.length, u8, dec };
+    const fr: Frame = { id: nextFrameId++, ts: Date.now(), dir, len: u8.length, u8, dec };
     state.frames.push(fr);
     if (state.frames.length > MAX_FRAMES) state.frames.shift();
     if (dir === 'in' && dec) onFrame(dec);
@@ -65,7 +70,16 @@ window.WebSocket = new Proxy(NativeWS, {
 
 // ---------- Аукціон ----------
 function onFrame(dec: DecodedFrame): void {
-  if (dec.type !== FrameType.Response || dec.cmd !== CMD_AUCTION_LIST) return;
+  if (dec.type !== FrameType.Response) return;
+  // склад шукаємо в будь-якій відповіді з полем 106 (зараз це стартовий 0x0002)
+  if (dec.m.some(x => x.f === 106)) {
+    const players = parseSquad(dec.m);
+    if (players) {
+      log('склад:', players.length, 'гравців');
+      postToBridge({ src: PAGE_SRC, cmd: 'squad', payload: { ts: Date.now(), players } });
+    }
+  }
+  if (dec.cmd !== CMD_AUCTION_LIST) return;
 
   const list = parseAuctionList(dec.m, state.settings);
   state.lastList = list;
@@ -143,12 +157,30 @@ function beep(times = 3): void {
 // ---------- Дебаг ----------
 const hex = (u8: Uint8Array) => Array.from(u8, x => x.toString(16).padStart(2, '0')).join('');
 
+const toDTO = (f: Frame): FrameDTO => ({
+  id: f.id, ts: f.ts, dir: f.dir, len: f.len,
+  type: f.dec?.type, seq: f.dec?.seq, cmd: f.dec?.cmd, m: f.dec?.m,
+  hex: f.dec ? undefined : hex(f.u8.subarray(0, 4096)),
+});
+
+function framesSince(since: number): FramesReply {
+  const all = state.frames;
+  // id монотонні — шукаємо перший потрібний з кінця (зазвичай питають тільки нові)
+  let i = all.length;
+  while (i > 0 && all[i - 1]!.id >= since) i--;
+  const chunk = all.slice(i, i + FRAMES_CHUNK);
+  const last = chunk[chunk.length - 1];
+  return {
+    session: performance.timeOrigin,
+    firstId: all[0]?.id ?? nextFrameId,
+    nextId: last ? last.id + 1 : Math.max(since, nextFrameId),
+    more: i + FRAMES_CHUNK < all.length,
+    frames: chunk.map(toDTO),
+  };
+}
+
 function dump(): void {
-  const data = state.frames.map(f => ({
-    ts: f.ts, dir: f.dir, len: f.len,
-    type: f.dec?.type, seq: f.dec?.seq, cmd: f.dec?.cmd, m: f.dec?.m,
-    hex: f.dec ? undefined : hex(f.u8),
-  }));
+  const data = state.frames.map(toDTO);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
   a.download = `t11-frames-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
@@ -184,6 +216,7 @@ window.addEventListener('message', (e: MessageEvent<BridgeMessage>) => {
     case 'beep': beep(); break;
     case 'dump': dump(); break;
     case 'scanNow': void scan(); break;
+    case 'frames': postToBridge({ src: PAGE_SRC, cmd: 'frames', reqId: msg.reqId, payload: framesSince(msg.since) }); break;
   }
 });
 

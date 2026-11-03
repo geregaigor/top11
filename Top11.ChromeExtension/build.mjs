@@ -35,7 +35,8 @@ const ctx = await esbuild.context({
   entryPoints: {
     inject: 'src/content/inject.ts',
     bridge: 'src/content/bridge.ts',
-    popup: 'src/popup/popup.ts',
+    background: 'src/background/background.ts',
+    viewer: 'src/viewer/viewer.ts',
   },
   outdir: 'dist',
   bundle: true,

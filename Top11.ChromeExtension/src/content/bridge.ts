@@ -1,7 +1,7 @@
 // Isolated world: chrome.storage / runtime <-> сторінка (MAIN world) через postMessage.
 import {
   BRIDGE_SRC, PAGE_SRC, loadHistory, loadState,
-  type BridgeMessage, type PageMessage, type PopupCommand, type ScanResult,
+  type BridgeMessage, type FramesReply, type PageMessage, type PopupCommand, type ScanResult, type ViewerRequest,
 } from '../shared/messages';
 
 /** Після ↻ розширення старий content script лишається на сторінці, але chrome.* в ньому вже мертві. */
@@ -47,10 +47,38 @@ let queue = Promise.resolve();
 chrome.storage.onChanged.addListener((changes) => {
   if ('running' in changes || 'settings' in changes) void pushSettings();
 });
-chrome.runtime.onMessage.addListener((msg: PopupCommand) => { post({ cmd: msg.cmd }); });
+// Запити переглядача трафіку: чекаємо відповідь від inject і повертаємо її через sendResponse.
+let reqSeq = 0;
+const pending = new Map<number, (r?: FramesReply) => void>();
+
+chrome.runtime.onMessage.addListener((msg: PopupCommand | ViewerRequest, _sender, sendResponse) => {
+  if (msg.cmd === 'frames') {
+    const reqId = ++reqSeq;
+    pending.set(reqId, sendResponse);
+    window.setTimeout(() => { if (pending.delete(reqId)) sendResponse(undefined); }, 5000);
+    post({ cmd: 'frames', reqId, since: msg.since });
+    return true; // async sendResponse
+  }
+  if (msg.cmd === 'ping') {
+    // живий content script — сторінка розширення може слати команди і чекати сканів
+    sendResponse({ ok: true });
+    return false;
+  }
+  post({ cmd: msg.cmd });
+  return false;
+});
 
 window.addEventListener('message', (e: MessageEvent<PageMessage>) => {
   if (e.source !== window || e.data?.src !== PAGE_SRC) return;
+  if (e.data.cmd === 'frames') {
+    pending.get(e.data.reqId)?.(e.data.payload);
+    pending.delete(e.data.reqId);
+    return;
+  }
+  if (e.data.cmd === 'squad') {
+    if (alive()) void chrome.storage.local.set({ squad: e.data.payload });
+    return;
+  }
   if (e.data.cmd === 'scan') {
     if (!alive()) {
       console.warn('[T11] розширення перезавантажено — онови вкладку гри (F5)');

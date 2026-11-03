@@ -5,7 +5,8 @@
   "description": "Відстежує гравців на аукціоні Top Eleven за віком і якістю.",
   "permissions": ["storage"],
   "host_permissions": ["https://www.topeleven.com/*"],
-  "action": { "default_popup": "popup.html", "default_title": "Top11 Auction" },
+  "action": { "default_title": "Top11" },
+  "background": { "service_worker": "background.js" },
   "content_scripts": [
     {
       "matches": ["https://www.topeleven.com/play/*"],
