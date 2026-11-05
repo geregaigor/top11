@@ -1,4 +1,4 @@
-// Клік по іконці розширення: відкрити сторінку Top11 або перейти на вже відкриту.
+// Клік по іконці: відкрити сторінку Top11 у новій вкладці поруч або перейти на вже відкриту.
 const PAGE = chrome.runtime.getURL('viewer.html');
 const GAME = 'https://www.topeleven.com/play';
 
@@ -10,6 +10,8 @@ chrome.action.onClicked.addListener(async (tab) => {
     await chrome.windows.update(existing.windowId, { focused: true });
     return;
   }
+
   const game = tab.url?.startsWith(GAME) ? `?tab=${tab.id}` : '';
   await chrome.tabs.create({ url: PAGE + game, index: tab.index + 1, windowId: tab.windowId });
 });
+

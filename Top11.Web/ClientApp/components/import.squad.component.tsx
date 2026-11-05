@@ -16,6 +16,8 @@ interface ExportPlayer {
   positions: string[];
   rank: number;
   tierUp: number;
+  /** false — світлі визначені не для всіх амплуа (тоді перевір галочки вручну) */
+  keysComplete?: boolean;
   skills: ExportSkill[];
 }
 interface ExportPayload { format: string; version: number; exportedAt: string; players: ExportPlayer[] }
@@ -142,6 +144,7 @@ export const ImportSquadButton = defineComponent({
     };
 
     const rankLabel = (p: ExportPlayer) => p.tierUp ? `+${p.tierUp}` : 'без рангу';
+    const mainCount = (p: ExportPlayer) => p.skills.filter(s => s.isMain).length;
 
     return () => <>
       <NButton size="small" secondary onClick={open}>
@@ -163,13 +166,13 @@ export const ImportSquadButton = defineComponent({
             </NSpace>
           : <NSpace vertical>
               <NText depth={3}>
-                Зіставлено по імені. Перевір і, якщо треба, вибери гравця вручну. Оновлюються навички, ранг і позиція;
+                Зіставлено по імені. Перевір і, якщо треба, вибери гравця вручну. Оновлюються навички (разом із галочками світлих), ранг і позиція;
                 ім'я, тренування та порядок на сайті не змінюються. Після імпорту натисни «Зберегти».
               </NText>
               <table style="width: 100%; border-collapse: collapse">
                 <thead>
                   <tr style="text-align: left; opacity: .6">
-                    <th style="padding: 4px">З гри</th><th style="padding: 4px">Вік</th><th style="padding: 4px">Ранг</th><th style="padding: 4px; width: 280px">На сайті</th>
+                    <th style="padding: 4px">З гри</th><th style="padding: 4px">Вік</th><th style="padding: 4px">Ранг</th><th style="padding: 4px" title="Світлі (ключові) навички">Світлі</th><th style="padding: 4px; width: 280px">На сайті</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -183,6 +186,10 @@ export const ImportSquadButton = defineComponent({
                       </td>
                       <td style="padding: 4px">{p.age}</td>
                       <td style="padding: 4px">{rankLabel(p)}</td>
+                      <td style="padding: 4px">
+                        {mainCount(p)}
+                        {p.keysComplete === false && <span title="Для частини амплуа світлі ще невідомі — перевір галочки після імпорту"><NTag size="small" type="warning" style="margin-left: 4px">перевір</NTag></span>}
+                      </td>
                       <td style="padding: 4px">
                         <NSelect size="small" filterable options={options.value} status={dup ? 'error' : undefined}
                           value={t} onUpdateValue={(v: Target) => { targets.value[i] = v; }} />

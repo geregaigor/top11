@@ -1,6 +1,6 @@
 // Експорт складу для сайту Top11 (вставляється на сторінці команди → «Імпорт з гри»).
 import type { SquadPlayer } from './messages';
-import { GK_GROUPS, OUTFIELD_GROUPS, SKILL_BASE, SKILL_STEP } from './skills';
+import { GK_GROUPS, keyFields, OUTFIELD_GROUPS, SKILL_BASE, SKILL_STEP } from './skills';
 
 export const EXPORT_FORMAT = 'top11-squad';
 export const EXPORT_VERSION = 1;
@@ -29,6 +29,8 @@ export interface ExportPlayer {
   rank: number;
   /** Бонус рангу (на сайті поле tierUp) */
   tierUp: number;
+  /** false — світлі навички визначені не для всіх амплуа (DML/DMR без рангу) */
+  keysComplete: boolean;
   skills: ExportSkill[];
 }
 
@@ -41,9 +43,11 @@ export interface ExportPayload {
 
 export function exportPlayer(p: SquadPlayer): ExportPlayer {
   const isGk = p.positions.includes('GK');
+  const { keys, complete } = keyFields(p.positions, p.skills, p.rank ?? 0);
   const skills: ExportSkill[] = (isGk ? GK_GROUPS : OUTFIELD_GROUPS).flatMap(g => g.idx.map((field, i) => {
     const raw = p.skills[field - 1] ?? 0;
-    const key = raw > SKILL_BASE;
+    const key = keys.has(field);
+    // світлі навички отримують бонус рангу (і отримають після підвищення рангу)
     return { skillType: g.types[i]!, value: Math.floor((raw - SKILL_BASE) / SKILL_STEP), raw, isMain: key, isTierUp: key };
   }));
   return {
@@ -57,6 +61,7 @@ export function exportPlayer(p: SquadPlayer): ExportPlayer {
     positions: p.positions,
     rank: p.rank ?? 0,
     tierUp: p.rankBonus ?? 0,
+    keysComplete: complete,
     skills,
   };
 }

@@ -9,23 +9,30 @@ export interface Settings {
   noSpecial: boolean;
   /** Тільки гравці з одним амплуа */
   singlePosition: boolean;
-  /** Інтервал оновлення списку аукціону, сек. */
+  /** Мінімальний К лота (поле 25.1) — схоже, це талант: вправ на +1 ≈ 11.1 / К. 0 = не фільтрувати */
+  minK: number;
+  /** Інтервал оновлення списку аукціону, сек. (тільки з autoNav) */
   intervalSec: number;
-  /** Калібрування якості: quality = (avgSkill - qZero) / qPerPct */
-  qZero: number;
-  qPerPct: number;
+  /** Самому клікати Дім → Трансфери → Аукціони. Вимкнено: лише слухаємо, гра сама оновлює список */
+  autoNav: boolean;
+  /** Панель з К поверх сторінки гри (справа) */
+  overlay: boolean;
+  /** Не давати грі «засинати», коли вкладка прихована (сокет не рветься) */
+  keepAlive: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   minAge: 18,
   maxAge: 19,
   minQuality: 0,
-  maxQuality: 50,
+  maxQuality: 30,
   noSpecial: true,
   singlePosition: true,
+  minK: 0,
   intervalSec: 200,
-  qZero: 20994,
-  qPerPct: 25.23,
+  autoNav: false,
+  overlay: true,
+  keepAlive: true,
 };
 
 export interface AuctionPlayer {
@@ -33,6 +40,7 @@ export interface AuctionPlayer {
   firstName: string;
   lastName: string;
   age: number;
+  /** ОБЩ як у грі: середнє всіх 15 навичок, (сире − 21500) / 25 */
   quality: number;
   skillAvg: number;
   price: number;
@@ -74,6 +82,9 @@ export interface SquadPlayer {
   rankBonus: number;
 }
 
+/** К (талант) гравців своєї команди: id гравця -> { k, ts }. Джерело — превʼю матчу (0x52), поле запису 25.1 */
+export type SquadK = Record<string, { k: number; ts: number }>;
+
 export interface SquadSnapshot {
   ts: number;
   players: SquadPlayer[];
@@ -104,14 +115,48 @@ export async function loadHistory(): Promise<History> {
   return (history as History | undefined) ?? {};
 }
 
+/** Точка кліку як частки розміру canvas гри (0..1) */
+export type NavPoint = readonly [number, number];
+
+/** Куди клікати, щоб відкрити аукціон. Калібрується мишкою на сторінці Top11. */
+export interface NavPoints {
+  home: NavPoint;
+  transfers: NavPoint;
+  auctionsTab: NavPoint;
+  /** Заголовок колонки «ЛЕТ» — сортування від наймолодших */
+  ageHeader: NavPoint;
+}
+
+export const DEFAULT_NAV_POINTS: NavPoints = {
+  home: [0.0257, 0.0255],
+  transfers: [0.0257, 0.1889],
+  auctionsTab: [0.1976, 0.1589],
+  ageHeader: [0.5372, 0.2288],
+};
+
+export const NAV_STEPS: { key: keyof NavPoints; label: string }[] = [
+  { key: 'home', label: 'Дім (іконка зліва вгорі)' },
+  { key: 'transfers', label: 'Трансфери (іконка в лівому меню)' },
+  { key: 'auctionsTab', label: 'вкладка «Аукціоны»' },
+  { key: 'ageHeader', label: 'заголовок колонки «ЛЕТ»' },
+];
+
+/** Результат останньої спроби відкрити аукціон кліками */
+export interface NavStatus {
+  ts: number;
+  ok: boolean;
+  text: string;
+}
+
 export interface StoredState {
   running: boolean;
   settings: Settings;
   lastScan?: ScanResult;
+  navPoints: NavPoints;
 }
 
 /** сторінка розширення (вкладка «Аукціон») -> content (chrome.tabs.sendMessage) */
-export type PopupCommand = { cmd: 'beep' } | { cmd: 'dump' } | { cmd: 'scanNow' } | { cmd: 'ping' };
+export type PopupCommand = { cmd: 'beep' } | { cmd: 'dump' } | { cmd: 'scanNow' } | { cmd: 'ping' } | { cmd: 'calibrate' };
 
 /** bridge (isolated) -> inject (MAIN) */
 export const BRIDGE_SRC = 't11-bridge';
@@ -120,6 +165,7 @@ export type BridgeMessage =
   | { src: typeof BRIDGE_SRC; cmd: 'beep' }
   | { src: typeof BRIDGE_SRC; cmd: 'dump' }
   | { src: typeof BRIDGE_SRC; cmd: 'scanNow' }
+  | { src: typeof BRIDGE_SRC; cmd: 'calibrate' }
   | { src: typeof BRIDGE_SRC; cmd: 'frames'; reqId: number; since: number };
 
 /** inject (MAIN) -> bridge (isolated) */
@@ -127,7 +173,35 @@ export const PAGE_SRC = 't11-page';
 export type PageMessage =
   | { src: typeof PAGE_SRC; cmd: 'scan'; payload: ScanResult }
   | { src: typeof PAGE_SRC; cmd: 'squad'; payload: SquadSnapshot }
+  | { src: typeof PAGE_SRC; cmd: 'squadK'; payload: SquadK }
+  | { src: typeof PAGE_SRC; cmd: 'wsEvent'; payload: WsEvent }
+  | { src: typeof PAGE_SRC; cmd: 'live'; payload: LiveStatus }
+  | { src: typeof PAGE_SRC; cmd: 'navPoints'; payload: NavPoints }
+  | { src: typeof PAGE_SRC; cmd: 'navStatus'; payload: NavStatus }
   | { src: typeof PAGE_SRC; cmd: 'frames'; reqId: number; payload: FramesReply };
+
+/** Стан сторінки гри для індикатора звʼязку */
+export interface LiveStatus {
+  /** Є відкритий сокет гри */
+  wsOpen: boolean;
+  /** Час останнього кадру від сервера (0 = ще не було) */
+  lastInTs: number;
+  /** Вкладка справді прихована */
+  hidden: boolean;
+  keepAlive: boolean;
+}
+
+/** Подія сокета / видимості вкладки гри — для діагностики розривів сесії */
+export interface WsEvent {
+  ts: number;
+  kind: 'open' | 'close' | 'error' | 'hidden' | 'visible';
+  code?: number;
+  reason?: string;
+  /** Чи була вкладка гри видимою в момент події */
+  visible: boolean;
+  /** Скільки секунд вкладка вже була прихована (для close) */
+  hiddenSec?: number;
+}
 
 // ---------- Переглядач трафіку ----------
 
@@ -163,10 +237,11 @@ export interface FramesReply {
 }
 
 export async function loadState(): Promise<StoredState> {
-  const s = await chrome.storage.local.get(['running', 'settings', 'lastScan']);
+  const s = await chrome.storage.local.get(['running', 'settings', 'lastScan', 'navPoints']);
   return {
     running: Boolean(s.running),
     settings: { ...DEFAULT_SETTINGS, ...(s.settings as Partial<Settings> | undefined) },
     lastScan: s.lastScan as ScanResult | undefined,
+    navPoints: { ...DEFAULT_NAV_POINTS, ...(s.navPoints as Partial<NavPoints> | undefined) },
   };
 }

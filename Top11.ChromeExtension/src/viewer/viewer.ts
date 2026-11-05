@@ -430,4 +430,6 @@ setView(VIEWS.includes(fromHash) ? fromHash : VIEWS.includes(saved as View) ? sa
 initSquadView();
 initAuctionView();
 
+
+
 void loadPrefs().then(() => { renderDetail(); void loop(); });

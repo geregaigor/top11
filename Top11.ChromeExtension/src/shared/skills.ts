@@ -50,6 +50,47 @@ export const GK_GROUPS: SkillGroup[] = [
 ];
 
 /**
+ * Світлі (ключові) навички за амплуа — номери полів 14.15.N. Виведено зі складу (гравці з рангом:
+ * ключові = ті, що отримують бонус рангу) і картки молодого DL. У кількох амплуа — обʼєднання
+ * (перевірено: Musiala AMR/AMC/AML, Stones DR/DC/DL, Raphinha MR/AMR).
+ * DML/DMR ще не бачили — для них світлі не визначаємо.
+ */
+const POSITION_KEYS: Partial<Record<string, number[]>> = {
+  GK: [4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  DC: [2, 3, 5, 7, 9, 11, 13, 15],
+  DL: [2, 5, 6, 7, 9, 13, 14, 15],
+  DR: [2, 5, 6, 7, 9, 13, 14, 15],
+  DMC: [1, 2, 3, 5, 7, 8, 9, 11, 13, 15],
+  // ML — з картки гравця в грі; MR дзеркальний (перевірено: Raphinha MR ∪ AMR збігається з грою)
+  ML: [1, 6, 7, 8, 10, 13, 14],
+  MR: [1, 6, 7, 8, 10, 13, 14],
+  MC: [1, 4, 5, 6, 7, 8, 9, 10, 13, 15],
+  AML: [1, 4, 6, 7, 8, 10, 12, 14],
+  AMR: [1, 4, 6, 7, 8, 10, 12, 14],
+  AMC: [1, 4, 6, 7, 8, 10, 11, 12],
+  ST: [1, 3, 4, 6, 8, 10, 11, 12, 13],
+};
+
+export interface KeyFields {
+  /** Номери полів 14.15.N світлих навичок */
+  keys: Set<number>;
+  /** false — у гравця є амплуа, для якого світлі ще невідомі */
+  complete: boolean;
+}
+
+/**
+ * Світлі навички гравця. З рангом — точно: ті, що отримують бонус (сире > SKILL_BASE).
+ * Без рангу (аукціон, молодь) усі навички плюсові, тож беремо за амплуа.
+ */
+export function keyFields(positions: string[], raw: number[], rank: number): KeyFields {
+  if (rank > 0) {
+    return { keys: new Set(raw.flatMap((r, i) => (r > SKILL_BASE ? [i + 1] : []))), complete: true };
+  }
+  const known = positions.filter(p => POSITION_KEYS[p]);
+  return { keys: new Set(known.flatMap(p => POSITION_KEYS[p]!)), complete: known.length === positions.length && known.length > 0 };
+}
+
+/**
  * Точне (не округлене) значення навички. Ключові навички (сире > SKILL_BASE) отримують бонус рангу,
  * неключові йдуть у мінус — гра показує їх як 1, але в суми груп і ОБЩ вони входять з мінусом.
  */
@@ -85,13 +126,13 @@ export interface SkillSheet {
   overallGame: number;
 }
 
-export function skillSheet(raw: number[], bonus: number, isGk: boolean): SkillSheet {
+export function skillSheet(raw: number[], bonus: number, isGk: boolean, keys?: Set<number>): SkillSheet {
   const exact = (field: number) => skillExact(raw[field - 1] ?? 0, bonus);
   const groups = isGk ? GK_GROUPS : OUTFIELD_GROUPS;
   const columns = groups.map(g => {
     const cells = g.idx.map((field, i) => {
       const r = raw[field - 1] ?? 0;
-      return { name: g.names[i]!, field, raw: r, value: real(exact(field)), game: shown(exact(field)), key: r > SKILL_BASE, max: r >= SKILL_MAX_RAW };
+      return { name: g.names[i]!, field, raw: r, value: real(exact(field)), game: shown(exact(field)), key: keys ? keys.has(field) : r > SKILL_BASE, max: r >= SKILL_MAX_RAW };
     });
     const avg = g.idx.reduce((a, f) => a + exact(f), 0) / g.idx.length;
     return { title: g.title, value: real(avg), game: shown(avg), cells };

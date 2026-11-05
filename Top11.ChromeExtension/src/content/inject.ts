@@ -1,11 +1,13 @@
 // MAIN world, document_start: перехоплюємо WebSocket до того, як Unity його створить.
+import { onRealVisibility, realHidden, setKeepAlive, workerInterval } from './keepalive';
 import { decodeFrame, flatten, FrameType, type DecodedFrame } from './proto';
 import { CMD_AUCTION_LIST, matches, parseAuctionList } from './auction';
-import { openAuctions } from './navigator';
-import { parseSquad } from './squad';
+import { openAuctions, setNavPoints, startCalibration } from './navigator';
+import { CMD_MATCH_PREVIEW, collectK, parseSquad } from './squad';
+import { hideOverlay, renderOverlay } from './overlay';
 import {
   BRIDGE_SRC, DEFAULT_SETTINGS, PAGE_SRC,
-  type AuctionPlayer, type BridgeMessage, type FrameDTO, type FramesReply, type PageMessage, type Settings,
+  type AuctionPlayer, type BridgeMessage, type FrameDTO, type FramesReply, type PageMessage, type Settings, type WsEvent,
 } from '../shared/messages';
 
 interface Frame {
@@ -14,10 +16,14 @@ interface Frame {
   dir: 'in' | 'out';
   len: number;
   u8: Uint8Array;
-  dec: DecodedFrame | null;
+  /** Лише заголовок; повне дерево розбираємо на вимогу (економія памʼяті за довгу сесію) */
+  head: { type: number; seq: number; cmd: number } | null;
 }
 
 const MAX_FRAMES = 10000;
+/** Ліміт буфера за обсягом сирих байтів */
+const MAX_BYTES = 40 * 1024 * 1024;
+let bufBytes = 0;
 /** Скільки кадрів віддавати переглядачу за один запит */
 const FRAMES_CHUNK = 1500;
 let nextFrameId = 0;
@@ -34,13 +40,19 @@ const state = {
 const log = (...a: unknown[]) => console.log('%c[T11]', 'color:#3c3', ...a);
 
 // ---------- Перехоплення ----------
+let lastInTs = 0;
 function record(dir: Frame['dir'], data: unknown): void {
   const push = (u8: Uint8Array) => {
     let dec: DecodedFrame | null = null;
     try { dec = decodeFrame(u8); } catch { /* ignore */ }
-    const fr: Frame = { id: nextFrameId++, ts: Date.now(), dir, len: u8.length, u8, dec };
-    state.frames.push(fr);
-    if (state.frames.length > MAX_FRAMES) state.frames.shift();
+    const head = dec ? { type: dec.type, seq: dec.seq, cmd: dec.cmd } : null;
+    state.frames.push({ id: nextFrameId++, ts: Date.now(), dir, len: u8.length, u8, head });
+    if (dir === 'in') lastInTs = Date.now();
+    if (dir === 'out' && head?.cmd === CMD_AUCTION_LIST) outWaiters.splice(0).forEach(w => w(true));
+    bufBytes += u8.length;
+    while (state.frames.length > MAX_FRAMES || (bufBytes > MAX_BYTES && state.frames.length > 1)) {
+      bufBytes -= state.frames.shift()!.len;
+    }
     if (dir === 'in' && dec) onFrame(dec);
   };
 
@@ -63,10 +75,53 @@ window.WebSocket = new Proxy(NativeWS, {
     const ws = new target(...args);
     state.sockets.push(ws);
     ws.addEventListener('message', e => { try { record('in', e.data); } catch { /* ignore */ } });
+    ws.addEventListener('open', () => wsEvent({ kind: 'open' }));
+    ws.addEventListener('error', () => wsEvent({ kind: 'error' }));
+    ws.addEventListener('close', e => wsEvent({ kind: 'close', code: e.code, reason: e.reason }));
     log('WS opened', ws.url);
     return ws;
   },
 });
+
+// ---------- Очікування запиту списку аукціону (перевірка, що кліки спрацювали) ----------
+const outWaiters: ((ok: boolean) => void)[] = [];
+
+function waitAuctionRequest(ms: number): Promise<boolean> {
+  return new Promise(resolve => {
+    const w = (ok: boolean) => { clearTimeout(t); resolve(ok); };
+    const t = setTimeout(() => { const i = outWaiters.indexOf(w); if (i >= 0) outWaiters.splice(i, 1); resolve(false); }, ms);
+    outWaiters.push(w);
+  });
+}
+
+// ---------- Діагностика розривів ----------
+let hiddenSince = realHidden() ? Date.now() : 0;
+
+function wsEvent(e: Omit<WsEvent, 'ts' | 'visible'>): void {
+  const visible = !realHidden();
+  const ev: WsEvent = { ...e, ts: Date.now(), visible };
+  if (!visible && hiddenSince) ev.hiddenSec = Math.round((Date.now() - hiddenSince) / 1000);
+  log('WS', ev.kind, ev.code ?? '', ev.reason ?? '', visible ? 'вкладка видима' : `вкладка прихована ${ev.hiddenSec ?? '?'} с`);
+  postToBridge({ src: PAGE_SRC, cmd: 'wsEvent', payload: ev });
+  sendLive();
+}
+
+/** Пульс для індикатора на сторінці розширення */
+function sendLive(): void {
+  postToBridge({ src: PAGE_SRC, cmd: 'live', payload: {
+    wsOpen: state.sockets.some(s => s.readyState === 1),
+    lastInTs, hidden: realHidden(), keepAlive: state.settings.keepAlive !== false,
+  } });
+}
+workerInterval(sendLive, 3000);
+
+onRealVisibility(hidden => {
+  hiddenSince = hidden ? Date.now() : 0;
+  postToBridge({ src: PAGE_SRC, cmd: 'wsEvent', payload: { ts: Date.now(), kind: hidden ? 'hidden' : 'visible', visible: !hidden } });
+});
+
+/** id гравців своєї команди (зі стартового кадру) — щоб у превʼю матчу відрізнити своїх від суперника */
+let squadIds = new Set<number>();
 
 // ---------- Аукціон ----------
 function onFrame(dec: DecodedFrame): void {
@@ -75,14 +130,25 @@ function onFrame(dec: DecodedFrame): void {
   if (dec.m.some(x => x.f === 106)) {
     const players = parseSquad(dec.m);
     if (players) {
+      squadIds = new Set(players.map(p => p.id));
       log('склад:', players.length, 'гравців');
       postToBridge({ src: PAGE_SRC, cmd: 'squad', payload: { ts: Date.now(), players } });
     }
   }
+  if (dec.cmd === CMD_MATCH_PREVIEW && squadIds.size) {
+    const found = collectK(dec.m, squadIds);
+    const n = Object.keys(found).length;
+    if (n) {
+      const ts = Date.now();
+      log('К своїх гравців з превʼю матчу:', n);
+      postToBridge({ src: PAGE_SRC, cmd: 'squadK', payload: Object.fromEntries(Object.entries(found).map(([id, k]) => [id, { k, ts }])) });
+    }
+  }
   if (dec.cmd !== CMD_AUCTION_LIST) return;
 
-  const list = parseAuctionList(dec.m, state.settings);
+  const list = parseAuctionList(dec.m);
   state.lastList = list;
+  if (state.settings.overlay) renderOverlay(list, p => matches(p, state.settings));
   const found = list.filter(p => matches(p, state.settings));
   const fresh = found.filter(p => !state.alerted.has(p.id));
 
@@ -93,7 +159,7 @@ function onFrame(dec: DecodedFrame): void {
   if (state.running && fresh.length) {
     fresh.forEach(p => state.alerted.add(p.id));
     beep();
-    log('ЗНАЙДЕНО:', fresh.map(p => `${p.lastName} ${p.age}р ${p.quality}%`).join(', '));
+    log('ЗНАЙДЕНО:', fresh.map(p => `${p.lastName} ${p.age}р ОБЩ ${p.quality}`).join(', '));
   }
 
   postToBridge({ src: PAGE_SRC, cmd: 'scan', payload: { ts: Date.now(), total: list.length, players: list, matches: found } });
@@ -106,14 +172,25 @@ let scanning = false;
 async function scan(): Promise<void> {
   if (scanning) return;
   scanning = true;
-  try { await openAuctions(); }
+  try {
+    let ok = false;
+    for (let attempt = 1; attempt <= 2 && !ok; attempt++) {
+      ok = await openAuctions(waitAuctionRequest);
+      if (!ok) log(`аукціон не відкрився (спроба ${attempt})`);
+    }
+    postToBridge({ src: PAGE_SRC, cmd: 'navStatus', payload: {
+      ts: Date.now(), ok,
+      text: ok ? 'аукціон відкрито' : 'не вдалося відкрити аукціон кліками — перекалібруй кліки (або відкрий аукціон вручну)',
+    } });
+  }
   catch (e) { log('scan error', e); }
   finally { scanning = false; }
 }
 
 function schedule(): void {
   window.clearTimeout(timer);
-  if (!state.running) return;
+  // без autoNav нічого не клікаємо: гра сама оновлює список, поки відкритий екран аукціону
+  if (!state.running || !state.settings.autoNav) return;
   const jitter = 0.8 + Math.random() * 0.4; // ±20%, щоб не клікати як метроном
   timer = window.setTimeout(async () => { await scan(); schedule(); }, state.settings.intervalSec * 1000 * jitter);
 }
@@ -123,8 +200,8 @@ function setRunning(running: boolean): void {
   state.running = running;
   if (running && !wasRunning) {
     state.alerted.clear();
-    log('старт моніторингу', state.settings);
-    void scan().then(schedule);
+    log('старт моніторингу', state.settings.autoNav ? '(з автокліками)' : '(лише слухаю — тримай відкритим екран аукціону)');
+    if (state.settings.autoNav) void scan().then(schedule);
   } else if (!running && wasRunning) {
     window.clearTimeout(timer);
     log('стоп');
@@ -137,6 +214,9 @@ let actx: AudioContext | undefined;
 function beep(times = 3): void {
   try {
     actx ??= new AudioContext();
+    // без кліку у вкладці гри Chrome тримає аудіо «suspended» — пробуємо розбудити
+    if (actx.state === 'suspended') void actx.resume().catch(() => undefined);
+    if (actx.state !== 'running') log('звук у вкладці гри заблоковано (не було кліку в грі) — сигнал зі сторінки Top11 / сповіщення');
     let t = actx.currentTime;
     for (let i = 0; i < times; i++) {
       const o = actx.createOscillator();
@@ -157,11 +237,19 @@ function beep(times = 3): void {
 // ---------- Дебаг ----------
 const hex = (u8: Uint8Array) => Array.from(u8, x => x.toString(16).padStart(2, '0')).join('');
 
-const toDTO = (f: Frame): FrameDTO => ({
-  id: f.id, ts: f.ts, dir: f.dir, len: f.len,
-  type: f.dec?.type, seq: f.dec?.seq, cmd: f.dec?.cmd, m: f.dec?.m,
-  hex: f.dec ? undefined : hex(f.u8.subarray(0, 4096)),
-});
+const decOf = (f: Frame): DecodedFrame | null => {
+  if (!f.head) return null;
+  try { return decodeFrame(f.u8); } catch { return null; }
+};
+
+const toDTO = (f: Frame): FrameDTO => {
+  const dec = decOf(f);
+  return {
+    id: f.id, ts: f.ts, dir: f.dir, len: f.len,
+    type: dec?.type, seq: dec?.seq, cmd: dec?.cmd, m: dec?.m,
+    hex: dec ? undefined : hex(f.u8.subarray(0, 4096)),
+  };
+};
 
 function framesSince(since: number): FramesReply {
   const all = state.frames;
@@ -193,9 +281,10 @@ function dump(): void {
 /** Кадри, де є рядок (напр. прізвище гравця), і шляхи полів. */
 function find(text: string) {
   return state.frames.flatMap((f, i) => {
-    if (!f.dec) return [];
-    const paths = flatten(f.dec.m).filter(([, v]) => typeof v === 'string' && v.includes(text)).map(([k]) => k);
-    return paths.length ? [{ i, dir: f.dir, cmd: f.dec.cmd.toString(16), len: f.len, paths }] : [];
+    const dec = decOf(f);
+    if (!dec) return [];
+    const paths = flatten(dec.m).filter(([, v]) => typeof v === 'string' && v.includes(text)).map(([k]) => k);
+    return paths.length ? [{ i, id: f.id, dir: f.dir, cmd: dec.cmd.toString(16), len: f.len, paths }] : [];
   });
 }
 
@@ -210,12 +299,23 @@ window.addEventListener('message', (e: MessageEvent<BridgeMessage>) => {
   switch (msg.cmd) {
     case 'settings':
       state.settings = msg.payload.settings;
+      setKeepAlive(state.settings.keepAlive !== false);
+      if (!state.settings.overlay) hideOverlay();
+      else if (state.lastList.length) renderOverlay(state.lastList, p => matches(p, state.settings));
+      setNavPoints(msg.payload.navPoints);
       setRunning(msg.payload.running);
       schedule();
       break;
     case 'beep': beep(); break;
     case 'dump': dump(); break;
     case 'scanNow': void scan(); break;
+    case 'calibrate':
+      startCalibration(points => {
+        setNavPoints(points);
+        log('калібрування', points);
+        postToBridge({ src: PAGE_SRC, cmd: 'navPoints', payload: points });
+      });
+      break;
     case 'frames': postToBridge({ src: PAGE_SRC, cmd: 'frames', reqId: msg.reqId, payload: framesSince(msg.since) }); break;
   }
 });
@@ -223,5 +323,5 @@ window.addEventListener('message', (e: MessageEvent<BridgeMessage>) => {
 declare global {
   interface Window { __t11: unknown }
 }
-window.__t11 = { state, find, dump, beep, scan, decodeFrame, flatten };
+window.__t11 = { state, find, dump, beep, scan, decodeFrame, decOf, flatten };
 log('injected');

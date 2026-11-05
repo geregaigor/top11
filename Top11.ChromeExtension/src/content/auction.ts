@@ -1,3 +1,4 @@
+import { auctionOvr } from '../shared/value';
 // Розбір відповіді на запит списку аукціону (команда 0x3E80).
 import { field, fields, flatten, isMsg, msg, num, str, type PbField, type PbValue } from './proto';
 
@@ -35,7 +36,7 @@ export const NO_SPECIAL = 16;
       4  країна (id)
       40 амплуа (repeated, індекс у POSITIONS)
 */
-export function parseAuctionList(m: PbField[], s: Pick<Settings, 'qZero' | 'qPerPct'>): AuctionPlayer[] {
+export function parseAuctionList(m: PbField[]): AuctionPlayer[] {
   const out: AuctionPlayer[] = [];
   for (const lot of fields(m, 1)) {
     if (!isMsg(lot)) continue;
@@ -50,7 +51,7 @@ export function parseAuctionList(m: PbField[], s: Pick<Settings, 'qZero' | 'qPer
       lastName: str(p, 3) ?? '',
       age: num(p, 5) ?? 0,
       skillAvg,
-      quality: Math.round((skillAvg - s.qZero) / s.qPerPct),
+      quality: auctionOvr(skillAvg),
       price: num(p, 26) ?? 0,
       special,
       hasSpecial: special !== NO_SPECIAL,
@@ -64,9 +65,10 @@ export function parseAuctionList(m: PbField[], s: Pick<Settings, 'qZero' | 'qPer
   return out;
 }
 
-export function matches(p: AuctionPlayer, s: Pick<Settings, 'minAge' | 'maxAge' | 'minQuality' | 'maxQuality' | 'noSpecial' | 'singlePosition'>): boolean {
+export function matches(p: AuctionPlayer, s: Pick<Settings, 'minAge' | 'maxAge' | 'minQuality' | 'maxQuality' | 'noSpecial' | 'singlePosition' | 'minK'>): boolean {
   return p.age >= s.minAge && p.age <= s.maxAge
     && p.quality >= s.minQuality && p.quality <= s.maxQuality
     && (!s.noSpecial || !p.hasSpecial)
-    && (!s.singlePosition || p.positions.length === 1);
+    && (!s.singlePosition || p.positions.length === 1)
+    && (!s.minK || p.lotFactor >= s.minK);
 }

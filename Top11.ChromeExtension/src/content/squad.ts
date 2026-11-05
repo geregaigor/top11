@@ -4,6 +4,25 @@ import { POSITIONS } from './auction';
 import type { SquadPlayer } from '../shared/messages';
 
 export const CMD_INIT = 0x0002;
+/** Превʼю матчу: склади обох команд, у кожного гравця є К (25.1) */
+export const CMD_MATCH_PREVIEW = 0x0052;
+
+/**
+ * Збирає К для гравців з переданого набору id (своя команда) з будь-якого повідомлення,
+ * де запис гравця має вигляд { 14: гравець, 25: { 1: double } }.
+ */
+export function collectK(m: PbField[], ids: Set<number>, out: Record<string, number> = {}): Record<string, number> {
+  for (const x of m) {
+    if (!isMsg(x.v)) continue;
+    const p = msg(x.v.m, 14);
+    const lot = msg(x.v.m, 25);
+    const id = p ? num(p, 1) : undefined;
+    const k = lot ? field(lot, 1) : undefined;
+    if (id !== undefined && ids.has(id) && typeof k === 'object' && 'd' in k) out[String(id)] = k.d;
+    else collectK(x.v.m, ids, out);
+  }
+  return out;
+}
 
 /*
   106 = склад
