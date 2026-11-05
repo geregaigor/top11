@@ -1,4 +1,4 @@
-﻿import { computed, defineComponent, ref, Transition, watch } from 'vue';
+﻿import { computed, defineComponent, onMounted, ref, Transition, watch } from 'vue';
 import { VApp, VAppBar, VAppBarTitle, VBtn, VDivider, VList, VListItem, VMain, VNavigationDrawer, VOverlay, VProgressCircular, VSpacer, } from 'vuetify/components';
 import { useAppStore } from '../stores/app.store';
 import api from '@/api';
@@ -56,7 +56,9 @@ export default defineComponent({
           <VApp>
             <VAppBar>
               <VBtn icon={mdiMenu} onClick={() => appStore.drawer = !appStore.drawer} />
-              <VAppBarTitle class="cursor-pointer" onClick={() => router.push("/")}>Top11</VAppBarTitle>
+              <VAppBarTitle class="cursor-pointer" onClick={() => router.push("/")}>
+                <span class={styles.brand}><img src="/favicon.svg" alt="" class={styles.brandLogo} />Top11</span>
+              </VAppBarTitle>
 
               <VSpacer />
               {appStore.isAuthenticated && <>
@@ -119,11 +121,23 @@ const Navigation = defineComponent({
     const appStore = useAppStore();
     const teamsStore = useTeamsStore();
     const navigation = useNavigation();
+    const router = useRouter();
     const { mdAndUp } = useDisplay();
     const { hasChanges, saving, save } = useSaveChanges();
     const teams = computed(() => {
       return teamsStore.teams.map(t => ({ title: t.name, to: `/teams/${t.id}` }));
     })
+
+    // версія розширення, опублікованого на сайті (оболонка) — для пункту меню
+    const extVersion = ref('');
+    onMounted(async () => {
+      try {
+        const r = await fetch('/ext/code/payload.json', { cache: 'no-store' });
+        if (!r.ok) return;
+        const { manifest } = await r.json() as { manifest: string };
+        extVersion.value = (JSON.parse(manifest) as { shell?: { latest?: string } }).shell?.latest ?? '';
+      } catch { /* не опубліковано — без версії */ }
+    });
 
     watch(
       () => teamsStore.teams,
@@ -147,6 +161,9 @@ const Navigation = defineComponent({
               ),
             }}
           </NTooltip>
+          {appStore.isAuthenticated && <NButton block secondary type="info" class="mt-2" onClick={() => router.push('/ext')}>
+            Розширення Chrome<span class={styles.newBadge}>new</span>{extVersion.value && <span class={styles.extVersion}>v{extVersion.value}</span>}
+          </NButton>}
           <br />
 
           {teams.value.map(t => {

@@ -4,218 +4,50 @@
 <meta charset="utf-8">
 <title>Top11</title>
 <style>
-  :root { --bg:#10141c; --panel:#161b26; --line:#262e3d; --fg:#e6e9ef; --dim:#8a93a6; --in:#5fb3ff; --out:#f0a35e; --sel:#24406b; --hit:#5c4b14; --str:#9fe0a3; --num:#e8c46a; }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body { font: 12px system-ui, sans-serif; background: var(--bg); color: var(--fg); display: flex; flex-direction: column; }
-  .mono, .k, .n, .h, td.n { font-family: ui-monospace, Consolas, monospace; }
-  header { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-  header h1 { font-size: 14px; margin: 0 8px 0 0; }
-  header input[type=search] { width: 260px; }
-  input, select, button { background: #1d2330; color: inherit; border: 1px solid #333c4f; border-radius: 4px; padding: 4px 7px; font: inherit; }
-  button { cursor: pointer; }
-  button.on { background: #2fa84f; border-color: #2fa84f; color: #fff; }
-  #status { margin-left: auto; color: var(--dim); }
-  #status.err { color: #ff8a8a; }
-  main { flex: 1; min-height: 0; display: grid; grid-template-columns: 400px minmax(520px, 1fr) 40%; }
-  section { min-height: 0; overflow: auto; border-right: 1px solid var(--line); }
-  section h2 { position: sticky; top: 0; z-index: 1; margin: 0; padding: 6px 8px; font-size: 12px; background: var(--panel); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
-  section h2 small { color: var(--dim); font-weight: 400; }
-  table { width: 100%; border-collapse: collapse; }
-  td, th { padding: 3px 5px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  th { text-align: left; color: var(--dim); font-weight: 600; position: sticky; top: 27px; background: var(--panel); }
-  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
-  tr[data-cmd], tr[data-id] { cursor: pointer; }
-  tr:hover td { background: #1a2130; }
-  tr.sel td { background: var(--sel); }
-  tr.off td { opacity: .4; }
-  td.in { color: var(--in); } td.out { color: var(--out); }
-  td.prev { max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; color: var(--dim); }
-  input.name { width: 150px; padding: 1px 4px; background: transparent; border-color: transparent; }
-  input.name:hover, input.name:focus { border-color: #333c4f; background: #1d2330; }
-  #detail { padding: 0 0 20px; border-right: 0; }
-  .dhead { padding: 8px 10px; border-bottom: 1px solid var(--line); line-height: 1.7; }
-  .dhead a { color: var(--in); cursor: pointer; }
-  .dhead button { margin-right: 4px; }
-  .tree { padding: 6px 10px; line-height: 1.55; }
-  .kids { padding-left: 16px; border-left: 1px dashed #2c3445; margin-left: 4px; }
-  details > summary { cursor: pointer; list-style: none; }
-  details > summary::before { content: '▸ '; color: var(--dim); }
-  details[open] > summary::before { content: '▾ '; }
-  .leaf { padding-left: 13px; }
-  .k { color: #b9a2ff; cursor: copy; }
-  .t { color: var(--dim); font-size: 11px; }
-  .s { color: var(--str); word-break: break-all; }
-  .tree .n { color: var(--num); }
-  .h { color: #9aa3b5; word-break: break-all; }
-  .hint { color: #7fd1c7; font-size: 11px; }
-  .sum { color: var(--dim); }
-  .hit { background: var(--hit); }
-  .empty { padding: 20px; color: var(--dim); }
-  nav { display: flex; gap: 2px; margin-right: 10px; }
-  nav button { border-radius: 4px 4px 0 0; border-bottom: 2px solid transparent; background: transparent; border-color: transparent; font-weight: 600; color: var(--dim); }
-  nav button.active { color: var(--fg); border-bottom-color: #2fa84f; }
-  [hidden] { display: none !important; }
-  #squadView { flex: 1; min-height: 0; overflow: auto; padding: 0 10px 20px; }
-  #squadView .meta { color: var(--dim); padding: 8px 0; }
-  #squadView table { max-width: 1100px; }
-  #squadView th { top: 0; cursor: pointer; user-select: none; }
-  #squadView th.sorted::after { content: ' ▾'; }
-  #squadView th.sorted.asc::after { content: ' ▴'; }
-  .pos { display: inline-block; padding: 0 5px; margin-right: 3px; border-radius: 3px; background: #26324a; font-size: 11px; }
-  .pos.GK { background: #2d4f7a; } .pos.D { background: #2c5a36; } .pos.M { background: #6a5420; } .pos.A { background: #6e2a2a; }
-  .cond { display: inline-block; width: 60px; height: 6px; border-radius: 3px; background: #2a3242; margin-right: 6px; vertical-align: middle; overflow: hidden; }
-  .cond i { display: block; height: 100%; }
-  #squadView tr.prow { cursor: pointer; }
-  .sqbar { display: flex; align-items: center; gap: 12px; justify-content: space-between; max-width: 1100px; }
-  #exportSquad { background: #2fa84f; border-color: #2fa84f; color: #fff; font-weight: 600; white-space: nowrap; }
-  #exportSquad:disabled { background: #1d2330; border-color: #333c4f; color: var(--dim); cursor: default; }
-  td.chk, th.chk { width: 24px; text-align: center; }
-  .ktal { color: #ffcf5c; font-weight: 700; }
-  .klow { color: var(--dim); }
-  td.chk input, th.chk input { accent-color: #2fa84f; cursor: pointer; }
-  #squadView tr.pcard > td { padding: 0; background: #0c1017; white-space: normal; }
-  .card { padding: 10px 12px 14px; }
-  .cardhead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-  .cardhead .num { font: 600 13px ui-monospace, Consolas, monospace; color: var(--dim); }
-  .cardhead .nm { font-size: 15px; }
-  .cardhead .ovr { font-size: 14px; }
-  .cardhead .ovr b { font-size: 18px; color: #fff; }
-  .cardhead .rank { color: #7fd1c7; font-weight: 600; }
-  .skills { display: grid; grid-template-columns: repeat(3, minmax(180px, 260px)); gap: 10px; }
-  .skcol { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-  .skhead { display: flex; justify-content: space-between; padding: 6px 10px; font-weight: 700; background: #1c2433; }
-  .sk { display: flex; justify-content: space-between; padding: 4px 10px; border-top: 1px solid var(--line); color: var(--dim); }
-  .sk b { font-variant-numeric: tabular-nums; }
-  .sk.key { color: var(--fg); box-shadow: inset 3px 0 0 #2fa84f; }
-  .neg { color: #ff7a7a; }
-  .sk .max { color: #ff5fa2; font-style: normal; margin-right: 2px; }
-  #auctionView { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; padding: 10px; align-items: start; }
-  .acol { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; position: sticky; top: 0; }
-  .acol label { display: flex; justify-content: space-between; align-items: center; margin: 7px 0; gap: 6px; }
-  .acol .range { display: flex; align-items: center; gap: 4px; }
-  .acol input[type=number] { width: 60px; }
-  .acol input[type=checkbox] { width: 16px; height: 16px; accent-color: #2fa84f; }
-  .acol > button, .acol .row button, .acol details button { width: 100%; margin-top: 8px; padding: 7px; font-weight: 600; }
-  .acol .row { display: flex; gap: 6px; }
-  #toggle.start { background: #2fa84f; border-color: #2fa84f; color: #fff; }
-  #toggle.stop { background: #c43c3c; border-color: #c43c3c; color: #fff; }
-  .acol details { margin-top: 10px; }
-  .acol summary { cursor: pointer; color: var(--dim); }
-  #aStatus { margin-top: 8px; color: #ff8a8a; }
-  .led { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.06); cursor: help; white-space: nowrap; }
-  .led i { width: 10px; height: 10px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
-  .led.green { color: #3ddc6b; }
-  .led.yellow { color: #ffcf5c; }
-  .led.red { color: #ff5c5c; }
-  .led.red i { animation: blink 1s infinite; }
-  @keyframes blink { 50% { opacity: .3; } }
-  #navStatus { margin-top: 6px; font-size: 12px; }
-  #navStatus.bad { color: #ffcf5c; }
-  #navStatus.good { color: var(--dim); }
-  .alists { min-width: 0; }
-  .alists .meta { color: var(--dim); margin-bottom: 8px; }
-  .alists details { margin-bottom: 14px; }
-  .alists summary { cursor: pointer; margin-bottom: 4px; }
-  .alists th { top: 0; }
-  .alists tr.match td { background: #1f4d2c; }
-  .alists td:nth-child(n+11), .alists th:nth-child(n+11) { text-align: center; }
-  .alists td.over { color: #ffcf5c; font-weight: 700; }
-  .alists td.under { color: #7fd1c7; }
-  .ahead { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; }
-  .ahead button { padding: 3px 8px; font-size: 11px; }
-  #scanMeta.stale { color: #ffcf5c; }
-  #wsLog { font: 11px ui-monospace, Consolas, monospace; max-height: 220px; overflow: auto; margin-top: 6px; }
-  #wsLog div { padding: 1px 0; }
-  #wsLog .close, #wsLog .error { color: #ff8a8a; }
-  #wsLog .hidden { color: var(--dim); }
-  #wsSummary { color: var(--dim); font-weight: 400; }
-  /* бічна панель / вузьке вікно */
-  @media (max-width: 820px) {
-    #auctionView { grid-template-columns: 1fr; }
-    .acol { position: static; }
-    main { grid-template-columns: 1fr; grid-auto-rows: minmax(240px, auto); overflow: auto; }
-    header h1, header input[type=search] { width: 100%; }
-  }
-  #toast { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: #2fa84f; color: #fff; padding: 6px 12px; border-radius: 6px; opacity: 0; transition: opacity .2s; pointer-events: none; }
-  #toast.show { opacity: 1; }
+  html, body { height: 100%; margin: 0; background: #10141c; color: #e6e9ef; font: 12px system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  #app { flex: 1; border: 0; width: 100%; display: block; }
+  #shellBar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 4px 10px; border-top: 1px solid #262e3d; color: #8a93a6; font-size: 11px; }
+  #shellBar button { font: inherit; padding: 2px 8px; background: #1d2433; color: #e6e9ef; border: 1px solid #262e3d; border-radius: 4px; cursor: pointer; }
+  #shellBar select { font: inherit; background: #161b26; color: #e6e9ef; border: 1px solid #262e3d; border-radius: 4px; padding: 1px 4px; }
+  #shellBar.local { background: #2a1f3d; }
+  #devControls { display: inline-flex; gap: 10px; align-items: center; }
+  #devControls[hidden] { display: none; }
+  #shellVer { cursor: default; user-select: none; }
+  #shellBar input[type=url] { font: inherit; width: 180px; background: #161b26; color: #e6e9ef; border: 1px solid #262e3d; border-radius: 4px; padding: 2px 6px; }
+  #shellBar .ok { color: #3ddc6b; } #shellBar .bad { color: #ff8a8a; }
+  #usBanner { padding: 10px 14px; background: #5c4b14; color: #fff; font-size: 13px; line-height: 1.5; }
+  #usBanner code { background: rgba(0,0,0,.3); padding: 1px 4px; border-radius: 3px; }
+  #usBanner button { margin-left: 8px; }
+  #shellBanner { padding: 10px 14px; background: #1f4a7a; color: #fff; font-size: 13px; line-height: 1.5; }
+  #shellBanner a { color: #ffd76a; font-weight: 600; }
+  #shellBanner button { font: inherit; font-weight: 600; padding: 3px 12px; margin-left: 6px; cursor: pointer; }
+  #shellBanner .hint { font-size: 11px; opacity: .8; margin-top: 4px; }
+  #shellBanner code { background: rgba(0,0,0,.3); padding: 1px 4px; border-radius: 3px; }
 </style>
 </head>
 <body>
-  <header>
-    <nav><button data-view="auction">Аукціон</button><button data-view="squad">Моя команда</button><button data-view="traffic">Трафік сокета</button></nav>
-    <span data-for="traffic" style="display:contents">
-    <input id="q" type="search" placeholder="Пошук: текст, число, 0x3E80, назва команди">
-    <select id="dir">
-      <option value="all">↑↓ усі</option>
-      <option value="out">↑ від гри (запити)</option>
-      <option value="in">↓ від сервера</option>
-    </select>
-    <button id="live" class="on">Live</button>
-    <button id="export">Експорт JSON</button>
-    <button id="clear">Очистити</button>
+  <div id="usBanner" hidden>
+    Гра не отримає код розширення: потрібно дозволити скрипти користувача.
+    Відкрий <code>chrome://extensions</code> → Top11 → <b>Details</b> → увімкни <b>Allow User Scripts</b>
+    (у старших Chrome достатньо режиму розробника). Потім F5 гри.
+    <button id="openExt">Відкрити налаштування</button>
+  </div>
+  <div id="shellBanner" hidden>
+    Вийшла нова версія розширення <b id="shellNew"></b> (у тебе <span id="shellMine"></span>).
+    <button id="shellUpdate">Оновити розширення</button> <span id="shellUpdStatus"></span>
+    <div class="hint">Перший раз Chrome попросить вибрати папку, куди ти розпакував розширення, і дозволити редагування — вибери «Дозволяти завжди».
+    Не виходить? <a id="shellHelp" target="_blank">Сторінка розширення на сайті</a> — там можна завантажити файли в папку заново (потім ↻ у <code>chrome://extensions</code>).</div>
+  </div>
+  <iframe id="app" allow="clipboard-write"></iframe>
+  <div id="shellBar">
+    <span id="shellVer" title="Top11"></span>
+    <span id="codeVer"></span>
+    <span id="codeStatus"></span>
+    <span id="devControls" hidden>
+      <label title="Звідки брати код. Сайт — підписаний код з /ext/code. Локальна папка — dist/payload цього розширення (npm run watch, підхоплюється сама)">Джерело <select id="codeSource"></select></label>
     </span>
-    <span id="status" data-for="traffic"></span>
-    <span id="link" class="led yellow" style="margin-left:auto"><i></i><span id="linkText">Перевіряю…</span></span>
-    <span id="ver" class="t"></span>
-  </header>
-  <div id="auctionView" data-for="auction">
-    <div class="acol">
-      <div class="settings">
-        <label>Вік <span class="range"><input id="minAge" type="number" min="16" max="40"> – <input id="maxAge" type="number" min="16" max="40"></span></label>
-        <label title="Як у грі (ОБЩ)">ОБЩ <span class="range"><input id="minQuality" type="number" min="0" max="300"> – <input id="maxQuality" type="number" min="0" max="300"></span></label>
-        <label>Без спецуміння <input id="noSpecial" type="checkbox"></label>
-        <label>Тільки 1 амплуа <input id="singlePosition" type="checkbox"></label>
-        <label title="Талант: множник швидкості тренування (1.15 ≈ на 15% швидше). 0 — не фільтрувати">К від <input id="minK" type="number" min="0" max="2" step="0.01"></label>
-        <label title="Панель справа на сторінці гри: поточний список аукціону з К, найкращі зверху">Показувати К у грі <input id="overlay" type="checkbox"></label>
-        <label title="Вимкнено: нічого не клікаємо, лише слухаємо — тримай у грі відкритим екран аукціону, гра сама оновлює список кожні ~4 хв">Самому відкривати аукціон <input id="autoNav" type="checkbox"></label>
-        <label title="Гра не «засинає», коли вкладка прихована: Unity продовжує працювати, і сервер не рве зʼєднання">Не засинати у фоні <input id="keepAlive" type="checkbox"></label>
-        <label>Оновлювати кожні, с <input id="intervalSec" type="number" min="20" max="3600"></label>
-      </div>
-      <button id="toggle" class="start">Старт аукціон</button>
-      <div class="row">
-        <button id="scanNow">Оновити зараз</button>
-        <button id="beep">Тест звуку</button>
-      </div>
-      <details>
-        <summary>Калібрування кліків / дебаг</summary>
-        <button id="calibrate" title="Потім у грі клікни по черзі: Дім → Трансфери → «Аукціоны» → заголовок «ЛЕТ»">Калібрувати кліки</button>
-        <div id="navInfo" class="t" style="margin-top:6px"></div>
-        <button id="dump">Скачати дамп фреймів</button>
-      </details>
-      <div id="aStatus"></div>
-      <div id="navStatus"></div>
-      <details id="wsBox">
-        <summary>Зʼєднання з грою <span id="wsSummary"></span></summary>
-        <div id="wsLog"></div>
-      </details>
-    </div>
-    <div class="alists">
-      <div class="meta" id="scanMeta"></div>
-      <details id="currentBox" open>
-        <summary><b>Поточні (<span id="currentCount">0</span>)</b></summary>
-        <table><thead><tr><th>Ім'я</th><th>Амп</th><th class="n">Вік</th><th class="n" title="Як у грі">ОБЩ</th><th class="n">Ціна</th><th class="n" title="Очікувана вартість за віком і ОБЩ: 264.7M × e^(−0.0669·вік + 0.0118·ОБЩ)">Очік.</th><th class="n" title="Наскільки ціна лота відрізняється від очікуваної">Δ</th><th class="n" title="Зарплата (поле 27)">З/П</th><th class="n" title="Талант: множник швидкості тренування. ≥ 1.15 — талант">К</th><th class="n" title="Прогноз вправ на +1 = 11.1 / К (для 18–21 р., навички до 80)">Вправ</th><th title="Спецуміння">С</th><th title="Ігровий стиль">Ст</th></tr></thead><tbody id="current"></tbody></table>
-      </details>
-      <div class="ahead"><b>Знайдені (<span id="historyCount">0</span>)</b><span><button id="copyAll">Копіювати все</button> <button id="clearHistory">Очистити</button></span></div>
-      <table><thead><tr><th>Ім'я</th><th>Амп</th><th class="n">Вік</th><th class="n" title="Як у грі">ОБЩ</th><th class="n">Ціна</th><th class="n" title="Очікувана вартість за віком і ОБЩ: 264.7M × e^(−0.0669·вік + 0.0118·ОБЩ)">Очік.</th><th class="n" title="Наскільки ціна лота відрізняється від очікуваної">Δ</th><th class="n" title="Зарплата (поле 27)">З/П</th><th class="n" title="Талант: множник швидкості тренування. ≥ 1.15 — талант">К</th><th class="n" title="Прогноз вправ на +1 = 11.1 / К (для 18–21 р., навички до 80)">Вправ</th><th title="Ігровий стиль">Ст</th><th class="n">Вперше</th></tr></thead><tbody id="history"></tbody></table>
-    </div>
   </div>
-  <div id="squadView" data-for="squad">
-    <div class="sqbar"><span class="meta" id="squadMeta"></span><button id="exportSquad" disabled>Експорт для Top11 (0)</button></div>
-    <table><thead><tr id="squadHead"></tr></thead><tbody id="squadBody"></tbody></table>
-  </div>
-  <main data-for="traffic">
-    <section id="cmds">
-      <h2>Команди <small>в порядку появи · клік = фільтр · назву можна вписати</small></h2>
-      <table><thead><tr><th class="n">#</th><th>cmd</th><th>Назва</th><th class="n" title="Кадрів від гри">↑</th><th class="n" title="Кадрів від сервера">↓</th><th class="n">Обсяг</th><th class="n" title="Перша поява, с від завантаження">Старт</th><th title="Показувати в списку кадрів">👁</th></tr></thead><tbody id="cmdBody"></tbody></table>
-    </section>
-    <section id="frames">
-      <h2>Кадри <small id="framesMeta"></small></h2>
-      <table><thead><tr><th class="n">id</th><th class="n">с</th><th></th><th>тип</th><th>cmd</th><th>назва</th><th class="n">seq</th><th class="n">байт</th><th>вміст</th></tr></thead><tbody id="frameBody"></tbody></table>
-    </section>
-    <section id="detail"></section>
-  </main>
-  <div id="toast"></div>
-  <script src="viewer.js"></script>
+  <script src="host.js"></script>
 </body>
 </html>

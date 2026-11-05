@@ -47,7 +47,6 @@ namespace Top11.Web.Api.Teams
 
 		public class Handler : IRequestHandler<Request>
 		{
-			private readonly IValidator<Request> _validator;
 			private readonly Top11DbContext _context;
 
 			public Handler(Top11DbContext context)
@@ -148,7 +147,7 @@ namespace Top11.Web.Api.Teams
 			{
 				app.MapPut("api/teams", async Task<Ok> (List<Request.Team> request, IMediator mediatr, HttpContext context) =>
 				{
-					var accountId = int.Parse(context.User.Claims.FirstOrDefault(t => t.Type == Top11CookieAuthenticationDefaults.Top11IdClimeName)?.Value);
+					var accountId = context.User.GetAccountId();
 					await mediatr.Send(new Request() { Teams = request, AccountId = accountId });
 					return TypedResults.Ok();
 				})

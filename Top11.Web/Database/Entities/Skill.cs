@@ -11,7 +11,7 @@ namespace Top11.Web.Database.Entities
 		public bool IsTierUp { get; set; }
 
 		public int PlayerId { get; set; }
-		public Player Player { get; set; }
+		public Player Player { get; set; } = null!;
 	}
 
 	public enum SkillType

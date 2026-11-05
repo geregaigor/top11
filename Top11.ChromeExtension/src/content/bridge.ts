@@ -48,7 +48,7 @@ async function saveToHistory(scan: ScanResult): Promise<void> {
 let queue = Promise.resolve();
 
 chrome.storage.onChanged.addListener((changes) => {
-  if ('running' in changes || 'settings' in changes || 'navPoints' in changes) void pushSettings();
+  if ('running' in changes || 'settings' in changes) void pushSettings();
 });
 // Запити переглядача трафіку: чекаємо відповідь від inject і повертаємо її через sendResponse.
 let reqSeq = 0;
@@ -78,6 +78,11 @@ window.addEventListener('message', (e: MessageEvent<PageMessage>) => {
     pending.delete(e.data.reqId);
     return;
   }
+  if (e.data.cmd === 'openViewer') {
+    // кнопка «Top11» у меню гри — як клік по іконці T
+    if (alive()) void chrome.runtime.sendMessage({ cmd: 'openViewer' }).catch(() => undefined);
+    return;
+  }
   if (e.data.cmd === 'live') {
     live = e.data.payload;
     liveAt = Date.now();
@@ -91,10 +96,6 @@ window.addEventListener('message', (e: MessageEvent<PageMessage>) => {
       const list = [...((wsLog as unknown[] | undefined) ?? []), ev].slice(-50);
       await chrome.storage.local.set({ wsLog: list });
     }).catch(err => console.warn('[T11] wsLog error', err));
-    return;
-  }
-  if (e.data.cmd === 'navPoints' || e.data.cmd === 'navStatus') {
-    if (alive()) void chrome.storage.local.set({ [e.data.cmd]: e.data.payload });
     return;
   }
   if (e.data.cmd === 'squadK') {
@@ -125,3 +126,5 @@ window.addEventListener('message', (e: MessageEvent<PageMessage>) => {
 
 void pushSettings();
 document.addEventListener('DOMContentLoaded', () => void pushSettings());
+// гра відкрилась — хай розширення одразу звірить код із сайтом (а не чекає 15 хв)
+if (alive()) void chrome.runtime.sendMessage({ cmd: 'pageLoaded' }).catch(() => undefined);

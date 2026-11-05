@@ -8,6 +8,7 @@ import { TeamsCreatePage } from './teams/create.page';
 import { useTeamsStore } from '../stores/teams.store';
 import { TeamPage } from './teams/team.page';
 import { GalleryPage } from './gallery.page';
+import { ExtensionPage } from './extension.page';
 
 const routes = [
   { path: '/', component: homePage, meta: { allowAnonymous: true } },
@@ -15,7 +16,8 @@ const routes = [
   { path: '/account', component: accountPage, },
   { path: '/teams/create', component: TeamsCreatePage },
   { path: '/teams/:id', component: TeamPage, props: (route: any) => ({ key: 'team_' + route.params.id }) },
-  { path: '/gallery', component: GalleryPage, meta: { allowAnonymous: true } }
+  { path: '/gallery', component: GalleryPage, meta: { allowAnonymous: true } },
+  { path: '/ext', component: ExtensionPage },
 ];
 
 const router = createRouter({

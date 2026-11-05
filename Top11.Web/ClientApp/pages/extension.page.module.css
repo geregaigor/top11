@@ -1,0 +1,36 @@
+.page {
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+.block {
+    margin-top: 16px;
+}
+
+.steps {
+    margin: 0 0 12px;
+    padding-left: 22px;
+    line-height: 1.7;
+}
+
+.steps code,
+.link {
+    background: rgba(255, 255, 255, .08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, Consolas, monospace;
+}
+
+.link {
+    cursor: pointer;
+}
+
+.small {
+    display: block;
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+.green {
+    color: rgb(13, 222, 156);
+}

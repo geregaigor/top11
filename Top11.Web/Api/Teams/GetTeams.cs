@@ -26,7 +26,7 @@ namespace Top11.Web.Api.Teams
 			public class PlayerResposne
 			{
 				public int Id { get; set; }
-				public string Name { get; set; }
+				public string Name { get; set; } = string.Empty;
 				public int TierUp { get; set; }
 				public Position Position { get; set; }
 				public int SortOrder { get; set; }
@@ -75,7 +75,7 @@ namespace Top11.Web.Api.Teams
 			{
 				app.MapGet("api/teams", async Task<Ok<List<Response>>> (IMediator mediatr, HttpContext context) =>
 				{
-					var accountId = int.Parse(context.User.Claims.FirstOrDefault(t => t.Type == Top11CookieAuthenticationDefaults.Top11IdClimeName)?.Value);
+					var accountId = context.User.GetAccountId();
 					var request = new Request() { AccountId = accountId };
 
 					var result = await mediatr.Send(request);

@@ -5,7 +5,9 @@
   "scripts": {
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "publish": "node build.mjs --publish",
+    "keygen": "node scripts/keygen.mjs"
   },
   "devDependencies": {
     "@types/chrome": "0.3.6",

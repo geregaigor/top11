@@ -8,22 +8,91 @@ npm i -D -E esbuild@0.28.2 typescript@5.4.4 @types/chrome
 npm run build      # -> dist/
 npm run watch      # перезбірка при змінах
 npm run typecheck
+npm run publish    # збірка + підписаний код у ../Top11.Web/ext (див. нижче)
 ```
 
 ## Встановлення
+Для людей: https://top11.tryasp.net/ext (після входу) — кнопка завантажує файли у вибрану папку + покрокова інструкція.
+Для розробки:
 1. `chrome://extensions` → **Developer mode**.
 2. **Load unpacked** → папка `Top11.ChromeExtension/dist`.
-3. Після змін: `npm run build` (або watch) → ↻ на картці розширення → перезавантажити вкладку гри.
+3. Top11 → **Details** → увімкнути **Allow User Scripts** (без цього гра не отримає код; сторінка розширення покаже жовтий банер).
+4. Після змін оболонки: `npm run build` → ↻ на картці розширення → F5 вкладки гри.
+
+## Оновлення коду з сайту (без перевстановлення)
+Розширення ділиться на дві частини:
+- **Оболонка** (пакет у `dist/`, міняється рідко): `src/background/background.ts` (оновлювач), `src/content/bridge.ts`, `src/shell/*` (обгортка сторінки + sandbox).
+- **Код** (качається з сайту): `inject.js` (гра, через `chrome.userScripts`), `viewer.js` + `viewer.html` (сторінка розширення, працює в sandbox-iframe, `src/payload/shim.ts` проксує `chrome.*`).
+
+Розширення при відкритті гри (F5) і сторінки Top11, а також кожні 15 хв читає `<сайт>/ext/code/payload.json`,
+перевіряє **підпис** (ECDSA P-256, публічний ключ вшитий у `src/shell/pubkey.ts`) і **sha256** кожного файлу, зберігає в `chrome.storage`.
+Без правильного підпису нічого не встановлюється. Сторінка розширення перезапускається сама; якщо нову версію знайдено при відкритті гри — вкладка гри перезавантажується один раз автоматично.
+**Приховані dev-налаштування:** 5 кліків по «Оболонка 0.7.0.N» за 2 с (повторно — сховати; запамʼятовується в браузері). У dev-режимі видно вкладку «Трафік сокета».
+Там **Джерело** (список). Перевірка сайту кожні 15 хв — завжди, вимкнути не можна:
+- **Сайт top11.tryasp.net** — підписаний код з `/ext/code` (за замовчуванням; у людей завжди це).
+- **Локальна папка dist (розробка)** — код з `dist/payload` цього розширення, без підпису і без сайту. Для розробки:
+  `npm run watch` → після кожної перезбірки сторінка розширення перезапускається сама (перевірка кожні 2 с), гра — F5.
+  ↻ розширення потрібен лише при зміні оболонки (`background`, `bridge`, `src/shell`, `manifest.json`).
+  Смужка в цьому режимі фіолетова. Повернути «Сайт» — і знову підтягнеться версія з сайту.
+
+### Опублікувати нову версію коду
+1. Скопіювати ключ (див. нижче) з розширення Bitwarden: нотатка **Top11 extension signing key** → скопіювати поле Notes.
+2. У PowerShell у `C:\source\Top11\Top11.ChromeExtension`:
+   ```
+   $env:T11_SIGNING_KEY = Get-Clipboard
+   npm run publish
+   Set-Clipboard ''
+   ```
+   Має написати `signing key: T11_SIGNING_KEY` і `published code 1.0.N, shell 0.7.0.M -> ../Top11.Web/ext`.
+   У `Top11.Web/ext/`: `payload.json` (підписаний: версії + sha256 усіх файлів) і `shell/` — точна копія `dist` (код — у `shell/payload/`).
+   Старих версій і zip нема — на сайті завжди лише остання.
+3. Задеплоїти сайт `Top11.Web` на https://top11.tryasp.net (папка `Top11.Web/ext/` іде в publish, роздається як `/ext/code/*` без кешу;
+   сторінка `/ext` — встановлення для авторизованих). Перевірка: https://top11.tryasp.net/ext/code/payload.json
+
+### Разом з Publish сайту
+`Top11.Web.csproj` (target `PublishExtension`) перед Publish сайту сам запускає `npm run publish` тут — якщо є ключ:
+змінна `T11_SIGNING_KEY` (або `BW_SESSION` для Bitwarden CLI) має бути в середовищі **процесу, що публікує**.
+Visual Studio, запущена з меню «Пуск», цієї змінної не бачить → у збірці буде попередження «Розширення НЕ опубліковано», а на сайт піде попередня версія з `ext\`.
+Варіанти:
+- з терміналу: `$env:T11_SIGNING_KEY = Get-Clipboard; dotnet publish ..\Top11.Web -c Release -p:PublishProfile=site8857-WebDeploy`
+- або запустити VS з того ж термінала: `$env:T11_SIGNING_KEY = Get-Clipboard; devenv ..\Top11.sln`
+- пропустити розширення: `-p:SkipExtensionPublish=true`
+
+### Оболонка змінилась? (publish каже сам)
+`npm run publish` рахує хеш зібраної оболонки (усе з `dist`, крім `payload/` і номера збірки) і порівнює з `Top11.Web/ext/shell.json`:
+- `shell unchanged` — роздавати нічого не треба, люди отримають лише новий код.
+- `SHELL CHANGED` — нова версія оболонки йде в підписаний `payload.json`. Якщо не змінилась — publish лишає в `manifest.json` попередню версію. Після деплою:
+  - у людей зі старою оболонкою на сторінці розширення синій банер «Вийшла нова версія розширення» з кнопкою «Оновити розширення»;
+  - новий код вони **не ставлять** (лишаються на попередньому, робочому), поки не оновлять розширення — тож нічого не зламається, навіть якщо забув.
+- Оновлення для людей: кнопка **«Оновити розширення»** в банері. Перший раз Chrome попросить вибрати папку розширення і дозволити редагування
+  («Дозволяти завжди»). Розширення качає файли оболонки з `/ext/code/shell/` (перевіряє підпис і sha256), пише їх у папку
+  (перевіривши, що там наш `manifest.json` тієї ж версії) і перезапускається само → F5 гри (`src/shell/self-update.ts`).
+  Запасний шлях: сторінка https://top11.tryasp.net/ext → «Завантажити в папку» (ту саму) → ↻ у `chrome://extensions`. Налаштування в `chrome.storage` зберігаються.
+
+Змінна `T11_SIGNING_KEY` живе до закриття термінала. Порядок пошуку ключу в `build.mjs`:
+`T11_SIGNING_KEY` → Bitwarden CLI (`bw get notes "Top11 extension signing key"`, якщо встановлений і розблокований) → файл `.keys/payload-private.jwk`.
+
+### Ключ підпису
+- Приватний ключ зберігається **тільки в Bitwarden**: Secure note з назвою рівно `Top11 extension signing key`, у полі Notes — JSON (`{"key_ops":...` / `{"crv":"P-256",...`).
+- Публічна частина вже в `src/shell/pubkey.ts` — без приватного ключа оновити код у встановлених розширеннях **неможливо**.
+- Перенести файл у Bitwarden (одноразово): `Get-Content .keys\payload-private.jwk | Set-Clipboard` → Bitwarden → **+** → **Secure note** → Name `Top11 extension signing key`, Notes: Ctrl+V → Save. Перевірити `npm run publish` → видалити `.keys\payload-private.jwk`.
+- Відновити файлом (якщо треба): створити `.keys\payload-private.jwk` і вставити JSON з нотатки. `.keys/` у `.gitignore` — **не комітити**.
+- `npm run keygen -- --force` створює НОВУ пару: старі встановлені розширення перестануть приймати оновлення, доведеться перезібрати й перевстановити пакет.
+- Без ручного копіювання: `winget install Bitwarden.CLI` → `bw login` → `$env:BW_SESSION = (bw unlock --raw)` → `npm run publish`.
 
 ## Структура
-- `src/content/inject.ts` — MAIN world, `document_start`: хук WebSocket, буфер кадрів, звук, `window.__t11`.
+- `src/content/inject.ts` — код для гри (user script, MAIN world, `document_start`): хук WebSocket, буфер кадрів, оверлей, `window.__t11`.
+- `src/content/keepalive.ts` — «Не засинати у фоні» (підміна visibility, rAF з Worker'а).
+- `src/shared/codepack.ts` — формат коду з сайту, порівняння версій, sha256.
+- `src/shell/` — обгортка сторінки (`host.ts`), sandbox-завантажувач (`app-boot.ts`), публічний ключ.
+- `scripts/keygen.mjs` — генерація пари ключів (одноразово).
 - `src/content/proto.ts` — декодер protobuf без схеми.
 - `src/content/bridge.ts` — міст chrome.storage/runtime ↔ сторінка.
-- `src/viewer/viewer.ts` + `static/viewer.html` — переглядач усього трафіку сокета (кнопка «Трафік сокета» в попапі).
-- `src/background/background.ts` — клік по іконці відкриває сторінку `viewer.html` (або перемикає на відкриту).
+- `src/viewer/viewer.ts` + `static/payload/viewer.html` — сторінка розширення (вкладки «Аукціон», «Моя команда», «Трафік сокета»).
+- `src/background/background.ts` — клік по іконці відкриває сторінку `viewer.html`; завантаження/перевірка/реєстрація коду з сайту.
 - `src/viewer/auction-view.ts` — вкладка «Аукціон»: Старт/Стоп, фільтри, дамп (колишній попап).
 - `src/shared/messages.ts` — спільні типи.
-- `static/manifest.json` — копіюється в dist.
+- `static/manifest.json`, `static/viewer.html`, `static/app.html` — оболонка; `static/payload/viewer.html` — розмітка сторінки (частина коду з сайту).
 
 ## Дебаг у консолі вкладки гри
 - `__t11.find('Bitarov')` — кадри, де є рядок, і шляхи полів.

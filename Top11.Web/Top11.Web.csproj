@@ -25,8 +25,36 @@
 	</ItemGroup>
 
 	<Target Name="ViteBuild" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Release' ">
-		<Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
+		<Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" Condition="!Exists('$(SpaRoot)node_modules')" />
 		<Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
 	</Target>
 
+	<!--
+		Під час Publish сайту — спершу публікуємо код Chrome-розширення (npm run publish у ..\Top11.ChromeExtension -> ext\).
+		Ключ підпису: змінна T11_SIGNING_KEY, розблокований Bitwarden CLI (BW_SESSION) або файл ..\Top11.ChromeExtension\.keys\payload-private.jwk.
+		Без ключа — попередження, на сайт іде те, що вже лежить у ext\. Вимкнути: -p:SkipExtensionPublish=true
+	-->
+	<PropertyGroup>
+		<ExtensionRoot>..\Top11.ChromeExtension\</ExtensionRoot>
+	</PropertyGroup>
+	<Target Name="PublishExtension" BeforeTargets="PrepareForPublish" Condition=" '$(SkipExtensionPublish)' != 'true' ">
+		<PropertyGroup>
+			<ExtensionKeyAvailable Condition=" '$(T11_SIGNING_KEY)' != '' Or '$(BW_SESSION)' != '' Or Exists('$(ExtensionRoot).keys\payload-private.jwk') ">true</ExtensionKeyAvailable>
+		</PropertyGroup>
+		<Warning Condition=" '$(ExtensionKeyAvailable)' != 'true' " Text="Extension NOT published: no signing key (T11_SIGNING_KEY / BW_SESSION / .keys\payload-private.jwk). Deploying previous ext\ contents." />
+		<Exec Condition=" '$(ExtensionKeyAvailable)' == 'true' And !Exists('$(ExtensionRoot)node_modules') " WorkingDirectory="$(ExtensionRoot)" Command="npm ci" />
+		<Exec Condition=" '$(ExtensionKeyAvailable)' == 'true' " WorkingDirectory="$(ExtensionRoot)" Command="npm run publish" />
+		<!-- npm run publish щойно переписав ext\ — прибираємо старий список (за імʼям, бо частини файлів уже нема) і читаємо заново -->
+		<ItemGroup>
+			<Content Remove="%(Content.Identity)" Condition="$([System.String]::Copy('%(Content.Identity)').StartsWith('ext\'))" />
+			<Content Include="ext\**" CopyToPublishDirectory="PreserveNewest" />
+		</ItemGroup>
+	</Target>
+
+	<ItemGroup>
+		<!-- Код Chrome-розширення, що роздається з /ext/code -->
+		<Content Remove="ext\**" />
+		<None Remove="ext\**" />
+		<Content Include="ext\**" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
 </Project>

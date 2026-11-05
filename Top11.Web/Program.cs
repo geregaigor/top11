@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using FluentValidation;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Top11.Web.Database;
 using Top11.Web.Infrastructure;
 using Vite.AspNetCore;
@@ -29,6 +30,17 @@ builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.C
 var app = builder.Build();
 app.ApplyMigrations();
 app.UseHttpsRedirection();
+
+// Код Chrome-розширення (Top11.ChromeExtension: npm run publish -> ext/) роздається як /ext/code/*.
+// Сам /ext лишається для сторінки про розширення (SPA). Розширення саме перевіряє підпис.
+var extDir = Path.Combine(app.Environment.ContentRootPath, "ext");
+Directory.CreateDirectory(extDir);
+app.UseStaticFiles(new StaticFileOptions
+{
+	FileProvider = new PhysicalFileProvider(extDir),
+	RequestPath = "/ext/code",
+	OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache",
+});
 app.UseStaticFiles();
 
 app.UseMiddleware<ValidationExceptionHandlingMiddleware>();

@@ -68,7 +68,7 @@ namespace Top11.Web.Api.Teams
 			{
 				app.MapPost("api/teams", async Task<Ok<Response>> (RequestDto dto, IMediator mediatr, HttpContext context) =>
 				{
-					var userId = int.Parse(context.User.Claims.FirstOrDefault(t => t.Type == Top11CookieAuthenticationDefaults.Top11IdClimeName)?.Value);
+					var userId = context.User.GetAccountId();
 
 					var request = dto.Adapt<Request>(TypeAdapterConfig<RequestDto, Request>.NewConfig()
 						.Map(dest => dest.AccountId, src => userId)

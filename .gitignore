@@ -255,3 +255,6 @@ GitHubVS.sln.DotSettings
 wwwroot
 node_modules
 appsettings.*.json
+#Top11.ChromeExtension
+Top11.ChromeExtension/.keys/
+Top11.Web/ext/

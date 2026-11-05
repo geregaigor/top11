@@ -1,13 +1,22 @@
 {
   "manifest_version": 3,
   "name": "Top11 Auction Watcher",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Відстежує гравців на аукціоні Top Eleven за віком і якістю.",
+  "minimum_chrome_version": "120",
   "permissions": [
-    "storage"
+    "storage",
+    "unlimitedStorage",
+    "alarms",
+    "userScripts"
   ],
   "host_permissions": [
-    "https://www.topeleven.com/*"
+    "https://www.topeleven.com/*",
+    "https://top11.tryasp.net/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
   ],
   "action": {
     "default_title": "Top11"
@@ -21,19 +30,17 @@
         "https://www.topeleven.com/play/*"
       ],
       "js": [
-        "inject.js"
-      ],
-      "run_at": "document_start",
-      "world": "MAIN"
-    },
-    {
-      "matches": [
-        "https://www.topeleven.com/play/*"
-      ],
-      "js": [
         "bridge.js"
       ],
       "run_at": "document_start"
     }
-  ]
+  ],
+  "sandbox": {
+    "pages": [
+      "app.html"
+    ]
+  },
+  "content_security_policy": {
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals allow-downloads; script-src 'self' 'unsafe-inline' 'unsafe-eval'; child-src 'self';"
+  }
 }

@@ -2,9 +2,9 @@
 import { onRealVisibility, realHidden, setKeepAlive, workerInterval } from './keepalive';
 import { decodeFrame, flatten, FrameType, type DecodedFrame } from './proto';
 import { CMD_AUCTION_LIST, matches, parseAuctionList } from './auction';
-import { openAuctions, setNavPoints, startCalibration } from './navigator';
 import { CMD_MATCH_PREVIEW, collectK, parseSquad } from './squad';
 import { hideOverlay, renderOverlay } from './overlay';
+import { installMenuButton } from './menu-button';
 import {
   BRIDGE_SRC, DEFAULT_SETTINGS, PAGE_SRC,
   type AuctionPlayer, type BridgeMessage, type FrameDTO, type FramesReply, type PageMessage, type Settings, type WsEvent,
@@ -29,7 +29,6 @@ const FRAMES_CHUNK = 1500;
 let nextFrameId = 0;
 
 const state = {
-  running: false,
   settings: { ...DEFAULT_SETTINGS } as Settings,
   frames: [] as Frame[],
   sockets: [] as WebSocket[],
@@ -48,7 +47,6 @@ function record(dir: Frame['dir'], data: unknown): void {
     const head = dec ? { type: dec.type, seq: dec.seq, cmd: dec.cmd } : null;
     state.frames.push({ id: nextFrameId++, ts: Date.now(), dir, len: u8.length, u8, head });
     if (dir === 'in') lastInTs = Date.now();
-    if (dir === 'out' && head?.cmd === CMD_AUCTION_LIST) outWaiters.splice(0).forEach(w => w(true));
     bufBytes += u8.length;
     while (state.frames.length > MAX_FRAMES || (bufBytes > MAX_BYTES && state.frames.length > 1)) {
       bufBytes -= state.frames.shift()!.len;
@@ -82,17 +80,6 @@ window.WebSocket = new Proxy(NativeWS, {
     return ws;
   },
 });
-
-// ---------- Очікування запиту списку аукціону (перевірка, що кліки спрацювали) ----------
-const outWaiters: ((ok: boolean) => void)[] = [];
-
-function waitAuctionRequest(ms: number): Promise<boolean> {
-  return new Promise(resolve => {
-    const w = (ok: boolean) => { clearTimeout(t); resolve(ok); };
-    const t = setTimeout(() => { const i = outWaiters.indexOf(w); if (i >= 0) outWaiters.splice(i, 1); resolve(false); }, ms);
-    outWaiters.push(w);
-  });
-}
 
 // ---------- Діагностика розривів ----------
 let hiddenSince = realHidden() ? Date.now() : 0;
@@ -156,56 +143,13 @@ function onFrame(dec: DecodedFrame): void {
   console.table(list.map(p => ({ name: `${p.firstName} ${p.lastName}`, age: p.age, q: p.quality, pos: p.positions.join(' '), price: p.price, spec: p.special, style: p.hasStyle, match: matches(p, state.settings) })));
   console.groupEnd();
 
-  if (state.running && fresh.length) {
+  if (fresh.length) {
     fresh.forEach(p => state.alerted.add(p.id));
-    beep();
+    if (state.settings.sound) beep();
     log('ЗНАЙДЕНО:', fresh.map(p => `${p.lastName} ${p.age}р ОБЩ ${p.quality}`).join(', '));
   }
 
   postToBridge({ src: PAGE_SRC, cmd: 'scan', payload: { ts: Date.now(), total: list.length, players: list, matches: found } });
-}
-
-// ---------- Цикл оновлення ----------
-let timer: number | undefined;
-let scanning = false;
-
-async function scan(): Promise<void> {
-  if (scanning) return;
-  scanning = true;
-  try {
-    let ok = false;
-    for (let attempt = 1; attempt <= 2 && !ok; attempt++) {
-      ok = await openAuctions(waitAuctionRequest);
-      if (!ok) log(`аукціон не відкрився (спроба ${attempt})`);
-    }
-    postToBridge({ src: PAGE_SRC, cmd: 'navStatus', payload: {
-      ts: Date.now(), ok,
-      text: ok ? 'аукціон відкрито' : 'не вдалося відкрити аукціон кліками — перекалібруй кліки (або відкрий аукціон вручну)',
-    } });
-  }
-  catch (e) { log('scan error', e); }
-  finally { scanning = false; }
-}
-
-function schedule(): void {
-  window.clearTimeout(timer);
-  // без autoNav нічого не клікаємо: гра сама оновлює список, поки відкритий екран аукціону
-  if (!state.running || !state.settings.autoNav) return;
-  const jitter = 0.8 + Math.random() * 0.4; // ±20%, щоб не клікати як метроном
-  timer = window.setTimeout(async () => { await scan(); schedule(); }, state.settings.intervalSec * 1000 * jitter);
-}
-
-function setRunning(running: boolean): void {
-  const wasRunning = state.running;
-  state.running = running;
-  if (running && !wasRunning) {
-    state.alerted.clear();
-    log('старт моніторингу', state.settings.autoNav ? '(з автокліками)' : '(лише слухаю — тримай відкритим екран аукціону)');
-    if (state.settings.autoNav) void scan().then(schedule);
-  } else if (!running && wasRunning) {
-    window.clearTimeout(timer);
-    log('стоп');
-  }
 }
 
 // ---------- Звук ----------
@@ -302,20 +246,9 @@ window.addEventListener('message', (e: MessageEvent<BridgeMessage>) => {
       setKeepAlive(state.settings.keepAlive !== false);
       if (!state.settings.overlay) hideOverlay();
       else if (state.lastList.length) renderOverlay(state.lastList, p => matches(p, state.settings));
-      setNavPoints(msg.payload.navPoints);
-      setRunning(msg.payload.running);
-      schedule();
       break;
     case 'beep': beep(); break;
     case 'dump': dump(); break;
-    case 'scanNow': void scan(); break;
-    case 'calibrate':
-      startCalibration(points => {
-        setNavPoints(points);
-        log('калібрування', points);
-        postToBridge({ src: PAGE_SRC, cmd: 'navPoints', payload: points });
-      });
-      break;
     case 'frames': postToBridge({ src: PAGE_SRC, cmd: 'frames', reqId: msg.reqId, payload: framesSince(msg.since) }); break;
   }
 });
@@ -323,5 +256,6 @@ window.addEventListener('message', (e: MessageEvent<BridgeMessage>) => {
 declare global {
   interface Window { __t11: unknown }
 }
-window.__t11 = { state, find, dump, beep, scan, decodeFrame, decOf, flatten };
+window.__t11 = { state, find, dump, beep, decodeFrame, decOf, flatten };
+installMenuButton(() => postToBridge({ src: PAGE_SRC, cmd: 'openViewer' }));
 log('injected');

@@ -6,7 +6,7 @@ namespace Top11.Web.Database.Entities
 	public class Team
 	{
 		public int Id { get; set; }
-		public string Name { get; set; }
+		public string Name { get; set; } = string.Empty;
 		public int SortOrder { get; set; }
 		public DateTime CreatedAt { get; set; }
 
@@ -14,7 +14,7 @@ namespace Top11.Web.Database.Entities
 		public int RecoveryBonus { get; set; }
 
 		public int AccountId { get; set; }
-		public Account Account { get; set; }
+		public Account Account { get; set; } = null!;
 
 		public ICollection<Player> Players { get; set; } = new List<Player>();
 	}

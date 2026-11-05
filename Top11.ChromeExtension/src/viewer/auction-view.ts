@@ -1,5 +1,5 @@
 // Вкладка «Аукціон» (колишній попап): фільтри, старт/стоп, поточний скан, знайдені.
-import { DEFAULT_SETTINGS, loadHistory, loadState, type AuctionPlayer, type LiveStatus, type NavStatus, type PopupCommand, type ScanResult, type Settings, type WsEvent } from '../shared/messages';
+import { DEFAULT_SETTINGS, loadHistory, loadState, type AuctionPlayer, type LiveStatus, type PopupCommand, type ScanResult, type Settings, type WsEvent } from '../shared/messages';
 import { findGameTab, forgetGameTab } from './game-tab';
 import { auctionOvr, expectedValue } from '../shared/value';
 
@@ -64,7 +64,7 @@ function beep(times = 3): void {
 }
 
 function beepOnFresh(scan?: ScanResult): void {
-  if (!running || !scan) return;
+  if (!scan || !inputs.sound?.checked) return;
   const fresh = scan.matches.filter(p => !beeped.has(p.id));
   fresh.forEach(p => beeped.add(p.id));
   if (fresh.length) beep();
@@ -72,13 +72,12 @@ function beepOnFresh(scan?: ScanResult): void {
 
 let lastScanTs = 0;
 let lastScanText = 'Сканів ще не було';
-let running = false;
 
 /** Скільки хвилин тому прийшов список; якщо давно — підказка відкрити екран аукціону */
 function renderScanMeta(): void {
   const el = $('scanMeta');
   const min = lastScanTs ? Math.floor((Date.now() - lastScanTs) / 60000) : 0;
-  const stale = running && lastScanTs > 0 && min >= 6;
+  const stale = lastScanTs > 0 && min >= 6;
   el.textContent = lastScanTs
     ? `${lastScanText} · ${min ? `${min} хв тому` : 'щойно'}${stale ? ' — список не оновлюється: відкрий у грі екран аукціону' : ''}`
     : lastScanText;
@@ -143,23 +142,10 @@ async function renderWsLog(): Promise<void> {
   }).join('') || '<div class="hidden">Подій ще нема</div>';
 }
 
-async function renderNav(): Promise<void> {
-  const { navStatus, navPoints } = await chrome.storage.local.get(['navStatus', 'navPoints']);
-  const st = navStatus as NavStatus | undefined;
-  const el = $('navStatus');
-  el.textContent = st ? `Кліки ${new Date(st.ts).toLocaleTimeString()}: ${st.text}` : '';
-  el.className = st ? (st.ok ? 'good' : 'bad') : '';
-  $('navInfo').textContent = navPoints ? 'Кліки відкалібровані під твоє вікно' : 'Кліки не калібровані (стандартні точки)';
-}
-
 async function renderState(): Promise<void> {
   const state = await loadState();
   const { settings, lastScan } = state;
-  running = state.running;
   writeInputs(settings);
-  const toggle = $<HTMLButtonElement>('toggle');
-  toggle.textContent = running ? 'Стоп' : 'Старт аукціон';
-  toggle.className = running ? 'stop' : 'start';
   $('aStatus').textContent = await linkStatus();
   renderScan(lastScan);
 }
@@ -223,20 +209,9 @@ export function initAuctionView(): void {
   inputs = Object.fromEntries(keys.map(k => [k, $<HTMLInputElement>(k)])) as Record<keyof Settings, HTMLInputElement>;
   for (const el of Object.values(inputs)) el.onchange = () => void saveSettings();
 
-  $('toggle').onclick = async () => {
-    const { running } = await loadState();
-    await saveSettings();
-    await chrome.storage.local.set({ running: !running });
-    await renderState();
-  };
-  $('scanNow').onclick = () => void send('scanNow');
   // тест: і в грі, і тут (щоб одразу було видно, де звук працює)
   $('beep').onclick = () => { beep(); void send('beep'); };
   $('dump').onclick = () => void send('dump');
-  $('calibrate').onclick = async () => {
-    await send('calibrate');
-    $('navInfo').textContent = 'Перейди на вкладку гри і клікни по черзі: Дім → Трансфери → «Аукціоны» → «ЛЕТ» (підказка зверху в грі)';
-  };
 
   // Уся історія з сирими полями — в буфер обміну, щоб передати на аналіз
   $('copyAll').onclick = async () => {
@@ -273,14 +248,10 @@ export function initAuctionView(): void {
       renderScan(scan);
       beepOnFresh(scan);
     }
-    if (changes.running?.newValue === true) beeped.clear();
     if ('history' in changes) void renderHistory();
-    if ('running' in changes) void renderState();
     if ('wsLog' in changes) void renderWsLog();
-    if ('navStatus' in changes || 'navPoints' in changes) void renderNav();
   });
   void renderWsLog();
-  void renderNav();
 
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version;
   // статус зв'язку з грою оновлюємо періодично (F5 гри, закрита вкладка тощо)

@@ -1,4 +1,4 @@
-/* Кнопка «Зберегти зміни» — зверху під app bar, поверх меню і контенту */
+﻿/* Кнопка «Зберегти зміни» — зверху під app bar, поверх меню і контенту */
 .saveBar {
     position: fixed;
     top: calc(var(--v-layout-top, 64px) + 8px);
@@ -46,4 +46,45 @@
     .saveBarHidden {
         transform: translateY(-16px);
     }
+}
+
+/* маленька плашка «new» біля пункту меню */
+.newBadge {
+    margin-left: 8px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 14px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #10141c;
+    background: linear-gradient(135deg, rgb(13, 222, 156), rgb(50, 153, 255));
+    box-shadow: 0 0 8px rgba(13, 222, 156, .45);
+    animation: newBadgePulse 2.4s ease-in-out infinite;
+}
+
+@keyframes newBadgePulse {
+    0%, 100% { box-shadow: 0 0 6px rgba(13, 222, 156, .35); }
+    50% { box-shadow: 0 0 12px rgba(13, 222, 156, .75); }
+}
+
+.extVersion {
+    margin-left: 6px;
+    font-size: 10px;
+    font-weight: 400;
+    opacity: .6;
+}
+
+/* логотип у шапці — той самий значок, що й фавіконка та кнопка в грі */
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brandLogo {
+    width: 28px;
+    height: 28px;
+    filter: drop-shadow(0 0 6px rgba(13, 222, 156, .45));
 }

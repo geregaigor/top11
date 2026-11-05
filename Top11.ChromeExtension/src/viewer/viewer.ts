@@ -1,4 +1,5 @@
 // Переглядач усього трафіку websocket гри: команди, кадри, дерево protobuf-полів.
+import '../payload/shim'; // першим: підставляє chrome.* у sandbox
 import { isMsg, type PbField, type PbValue } from '../content/proto';
 import type { FrameDTO, FramesReply, ViewerRequest } from '../shared/messages';
 import { initSquadView } from './squad-view';
@@ -412,7 +413,18 @@ $('export').addEventListener('click', () => {
 // ---------- Вкладки сторінки ----------
 const VIEWS = ['auction', 'squad', 'traffic'] as const;
 type View = typeof VIEWS[number];
+
+/** Dev-режим: 5 кліків по версії на смужці (t11-dev у localStorage обгортки) або джерело «Локальна папка» */
+let dev = false;
+try { dev = localStorage.getItem('t11-dev') === '1'; } catch { /* ignore */ }
+const trafficBtn = document.querySelector<HTMLButtonElement>('nav button[data-view="traffic"]');
+if (trafficBtn) trafficBtn.hidden = !dev;
+void chrome.storage.local.get('updater').then((r: Record<string, unknown>) => {
+  if ((r.updater as { mode?: string } | undefined)?.mode === 'local') { dev = true; if (trafficBtn) trafficBtn.hidden = false; }
+});
+
 function setView(v: View): void {
+  if (v === 'traffic' && !dev) v = 'auction'; // «Трафік сокета» — лише в dev-режимі
   document.body.dataset.view = v;
   for (const el of document.querySelectorAll<HTMLElement>('[data-for]')) el.hidden = el.dataset.for !== v;
   try { localStorage.setItem('view', v); } catch { /* ignore */ }
