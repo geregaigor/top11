@@ -2,7 +2,7 @@
 import { onRealVisibility, realHidden, setKeepAlive, workerInterval } from './keepalive';
 import { decodeFrame, flatten, FrameType, type DecodedFrame } from './proto';
 import { CMD_AUCTION_LIST, matches, parseAuctionList } from './auction';
-import { CMD_MATCH_PREVIEW, collectK, parseSquad } from './squad';
+import { CMD_MATCH_PREVIEW, CMD_MATCH_START, collectK, parseMatchPreview, parseMatchStart, parseSquad } from './squad';
 import { hideOverlay, renderOverlay } from './overlay';
 import { installMenuButton } from './menu-button';
 import {
@@ -122,7 +122,15 @@ function onFrame(dec: DecodedFrame): void {
       postToBridge({ src: PAGE_SRC, cmd: 'squad', payload: { ts: Date.now(), players } });
     }
   }
-  if (dec.cmd === CMD_MATCH_PREVIEW && squadIds.size) {
+  if (dec.cmd === CMD_MATCH_PREVIEW || dec.cmd === CMD_MATCH_START) {
+    const teams = dec.cmd === CMD_MATCH_START ? parseMatchStart(dec.m) : parseMatchPreview(dec.m);
+    if (teams.length) {
+      const mine = squadIds.size ? teams.findIndex(t => t.players.some(p => squadIds.has(p.id))) : -1;
+      log('превʼю матчу:', teams.map(t => `${t.name} (${t.players.length})`).join(' vs '));
+      postToBridge({ src: PAGE_SRC, cmd: 'matchPreview', payload: { ts: Date.now(), teams, mine } });
+    }
+  }
+  if ((dec.cmd === CMD_MATCH_PREVIEW || dec.cmd === CMD_MATCH_START) && squadIds.size) {
     const found = collectK(dec.m, squadIds);
     const n = Object.keys(found).length;
     if (n) {

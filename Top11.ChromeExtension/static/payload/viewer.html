@@ -2,14 +2,14 @@
 <html lang="uk">
 <head>
 <meta charset="utf-8">
-<title>Top11</title>
+<title>Top11Ext</title>
 <style>
   :root { --bg:#10141c; --panel:#161b26; --line:#262e3d; --fg:#e6e9ef; --dim:#8a93a6; --in:#5fb3ff; --out:#f0a35e; --sel:#24406b; --hit:#5c4b14; --str:#9fe0a3; --num:#e8c46a; }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body { font: 12px system-ui, sans-serif; background: var(--bg); color: var(--fg); display: flex; flex-direction: column; }
   .mono, .k, .n, .h, td.n { font-family: ui-monospace, Consolas, monospace; }
-  header { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header { position: relative; display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   header h1 { font-size: 14px; margin: 0 8px 0 0; }
   header input[type=search] { width: 260px; }
   input, select, button { background: #1d2330; color: inherit; border: 1px solid #333c4f; border-radius: 4px; padding: 4px 7px; font: inherit; }
@@ -56,6 +56,15 @@
   nav button { border-radius: 4px 4px 0 0; border-bottom: 2px solid transparent; background: transparent; border-color: transparent; font-weight: 600; color: var(--dim); }
   nav button.active { color: var(--fg); border-bottom-color: #2fa84f; }
   [hidden] { display: none !important; }
+  #matchView { flex: 1; min-height: 0; overflow: auto; padding: 0 10px 20px; }
+  #matchView .oppbar { display: flex; gap: 6px; align-items: center; padding-top: 10px; }
+  #matchView .oppbar select { min-width: 320px; }
+  #matchView .meta { color: var(--dim); padding: 8px 0; }
+  #matchView h3 { font-size: 13px; margin: 10px 0 6px; }
+  #matchView h3 small { color: var(--dim); font-weight: 400; margin-left: 6px; }
+  #matchView table { max-width: 640px; }
+  #matchView td.over { color: #ffcf5c; }
+  #matchView td.t { color: var(--dim); }
   #squadView { flex: 1; min-height: 0; overflow: auto; padding: 0 10px 20px; }
   #squadView .meta { color: var(--dim); padding: 8px 0; }
   #squadView table { max-width: 1100px; }
@@ -92,6 +101,15 @@
   .sk .max { color: #ff5fa2; font-style: normal; margin-right: 2px; }
   #auctionView { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; padding: 10px; align-items: start; }
   .acol { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; position: sticky; top: 0; }
+  .acol h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; padding-bottom: 8px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .acol h2 .ico { color: #2fa84f; font-size: 15px; }
+  .help { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 1px solid #5fb3ff; border-radius: 50%; color: #5fb3ff; font-size: 10px; font-weight: 700; cursor: help; outline: none; }
+  .help .tip { display: none; position: absolute; left: 0; top: calc(100% + 8px); z-index: 50; width: 340px; padding: 10px 12px; background: #1b2232; border: 1px solid #333c4f; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.5); color: var(--fg); font-size: 12px; font-weight: 400; line-height: 1.45; cursor: default; }
+  .help:hover .tip, .help:focus .tip { display: block; }
+  .help .tip b { color: #fff; }
+  .help .tip ul { margin: 4px 0 6px; padding-left: 16px; }
+  .help .tip li { margin: 2px 0; }
+  .help .tip p { margin: 6px 0 0; color: var(--dim); }
   .acol label { display: flex; justify-content: space-between; align-items: center; margin: 7px 0; gap: 6px; }
   .acol .range { display: flex; align-items: center; gap: 4px; }
   .acol input[type=number] { width: 60px; }
@@ -101,6 +119,13 @@
   .acol details { margin-top: 10px; }
   .acol summary { cursor: pointer; color: var(--dim); }
   #aStatus { margin-top: 8px; color: #ff8a8a; }
+  .site-link { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 7px; padding: 4px 14px 4px 10px; border-radius: 999px; font-weight: 600; font-size: 12px; color: #dff7e6; text-decoration: none; white-space: nowrap;
+    background: linear-gradient(var(--bg), var(--bg)) padding-box, linear-gradient(120deg, #2fa84f, #5fb3ff) border-box; border: 1px solid transparent; transition: box-shadow .2s, color .2s; }
+  .site-link:hover { color: #fff; box-shadow: 0 0 0 3px rgba(47,168,79,.15), 0 0 14px rgba(95,179,255,.25); }
+  .site-link svg { width: 14px; height: 14px; flex: none; }
+  .site-link .arr { opacity: .6; transition: transform .2s, opacity .2s; }
+  .site-link:hover .arr { opacity: 1; transform: translate(2px, -2px); }
+  @media (max-width: 900px) { .site-link { position: static; transform: none; } }
   .led { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.06); cursor: help; white-space: nowrap; }
   .led i { width: 10px; height: 10px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
   .led.green { color: #3ddc6b; }
@@ -141,7 +166,7 @@
 </head>
 <body>
   <header>
-    <nav><button data-view="auction">Аукціон</button><button data-view="squad">Моя команда</button><button data-view="traffic">Трафік сокета</button></nav>
+    <nav><button data-view="auction">Аукціон</button><button data-view="squad">Моя команда</button><button data-view="match">Суперники</button><button data-view="traffic">Трафік сокета</button></nav>
     <span data-for="traffic" style="display:contents">
     <input id="q" type="search" placeholder="Пошук: текст, число, 0x3E80, назва команди">
     <select id="dir">
@@ -158,24 +183,49 @@
       <div id="wsLog"></div>
     </details>
     </span>
+    <a id="siteLink" class="site-link" href="https://top11.tryasp.net/" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+      Сайт Top11 <span class="arr">↗</span>
+    </a>
     <span id="status" data-for="traffic"></span>
     <span id="link" class="led yellow" style="margin-left:auto"><i></i><span id="linkText">Перевіряю…</span></span>
     <span id="ver" class="t"></span>
   </header>
   <div id="auctionView" data-for="auction">
     <div class="acol">
+      <h2><span class="ico">📡</span>Аукціон-радар
+        <span class="help" tabindex="0">?<span class="tip">
+          <b>Що робить:</b> стежить за аукціоном у грі і сигналить, коли зʼявляється гравець під твій фільтр.
+          <ul>
+            <li><b>Фільтр</b> — вік, ОБЩ, без спецуміння, одне амплуа, мінімальний <b>К</b> (талант: 1.15 ≈ на 15% швидше тренується; 0 — не фільтрувати).</li>
+            <li><b>Звук при знахідці</b> — тричі пищить на кожного нового гравця під фільтр.</li>
+            <li><b>Звук, якщо сканів нема</b> — інший, низький звук, якщо список не оновлювався 6 хв (гра зависла, розрив, інший екран). Повтор раз на 2 хв.</li>
+            <li><b>Показувати К у грі</b> — панель справа на сторінці гри з К усіх лотів.</li>
+            <li><b>Не засинати у фоні</b> — гра не рве зʼєднання, коли вкладка прихована.</li>
+          </ul>
+          <b>Як користуватись:</b>
+          <ul>
+            <li>Відкрий гру і в ній екран аукціону — список оновлюється сам.</li>
+            <li>Налаштуй фільтр, натисни «Тест звуку» / «Тест: нема сканів», щоб браузер дозволив звук.</li>
+            <li>Тримай цю вкладку відкритою (можна у фоні). Знайдені гравці лишаються в списку «Знайдені».</li>
+          </ul>
+          <p>Якщо «Онови вкладку з грою» — натисни F5 у грі.</p>
+        </span></span>
+      </h2>
       <div class="settings">
         <label>Вік <span class="range"><input id="minAge" type="number" min="16" max="40"> – <input id="maxAge" type="number" min="16" max="40"></span></label>
         <label title="Як у грі (ОБЩ)">ОБЩ <span class="range"><input id="minQuality" type="number" min="0" max="300"> – <input id="maxQuality" type="number" min="0" max="300"></span></label>
         <label>Без спецуміння <input id="noSpecial" type="checkbox"></label>
         <label>Тільки 1 амплуа <input id="singlePosition" type="checkbox"></label>
-        <label title="Талант: множник швидкості тренування (1.15 ≈ на 15% швидше). 0 — не фільтрувати">К від <input id="minK" type="number" min="0" max="2" step="0.01"></label>
+        <label title="К — множник швидкості тренування гравця (коефіцієнт лота). 1.00 — звичайна, 1.15 — на 15% швидше. Показувати тільки гравців з К не менше вказаного; 0 — не фільтрувати">Талант, К ≥ <input id="minK" type="number" min="0" max="2" step="0.01" placeholder="0"></label>
         <label title="Панель справа на сторінці гри: поточний список аукціону з К, найкращі зверху">Показувати К у грі <input id="overlay" type="checkbox"></label>
         <label title="Сигнал, коли в списку аукціону зʼявляється новий гравець під фільтр (на цій сторінці і у вкладці гри)">Звук при знахідці <input id="sound" type="checkbox"></label>
+        <label title="Якщо список аукціону не оновлювався 6 хвилин — звук (інший, ніж при знахідці). Повторюється раз на 2 хв, поки скани не відновляться. Працює, поки відкрита ця сторінка.">Звук, якщо сканів нема 6 хв <input id="staleAlert" type="checkbox"></label>
         <label title="Гра не «засинає», коли вкладка прихована: Unity продовжує працювати, і сервер не рве зʼєднання">Не засинати у фоні <input id="keepAlive" type="checkbox"></label>
       </div>
       <div class="row">
         <button id="beep">Тест звуку</button>
+        <button id="staleTest" title="Як звучить звук «скани застрягли»">Тест: нема сканів</button>
       </div>
       <div id="aStatus"></div>
     </div>
@@ -192,6 +242,11 @@
   <div id="squadView" data-for="squad">
     <div class="sqbar"><span class="meta" id="squadMeta"></span><button id="exportSquad" disabled>Експорт для Top11 (0)</button></div>
     <table><thead><tr id="squadHead"></tr></thead><tbody id="squadBody"></tbody></table>
+  </div>
+  <div id="matchView" data-for="match">
+    <div class="oppbar"><select id="oppSelect" hidden title="Збережені суперники (з превʼю матчів), нові зверху"></select><button id="oppDelete" title="Прибрати цього суперника зі списку">Видалити</button></div>
+    <div class="meta" id="matchMeta"></div>
+    <div id="matchBody"></div>
   </div>
   <main data-for="traffic">
     <section id="cmds">

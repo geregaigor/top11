@@ -75,7 +75,8 @@ const COLS: Col[] = [
 ];
 
 let snapshot: SquadSnapshot | undefined;
-let sortCol = 1;
+/** -1 — як прийшло з сервера; клік по заголовку: ↑ → ↓ → знову як з сервера */
+let sortCol = -1;
 let asc = true;
 const openIds = new Set<number>();
 
@@ -124,11 +125,12 @@ function render(): void {
     ? `${players.length} гравців · оновлено ${new Date(snapshot.ts).toLocaleString('uk-UA')} · клік по гравцю — навички · дані приходять при завантаженні гри (F5 вкладки гри — оновити)`
     : 'Складу ще нема — онови вкладку гри (F5), він приходить при старті.';
 
-  const col = COLS[sortCol]!;
-  players.sort((a, b) => {
+  const col = COLS[sortCol];
+  // sort стабільний: при рівних значеннях лишається серверний порядок
+  if (col) players.sort((a, b) => {
     const x = col.key(a), y = col.key(b);
     const r = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y));
-    return (asc ? r : -r) || a.number - b.number;
+    return asc ? r : -r;
   });
 
   const ids = currentIds();
@@ -177,7 +179,7 @@ export function initSquadView(): void {
     const th = (e.target as HTMLElement).closest<HTMLElement>('th[data-i]');
     if (!th) return;
     const i = Number(th.dataset.i);
-    if (i === sortCol) asc = !asc; else { sortCol = i; asc = true; }
+    if (i !== sortCol) { sortCol = i; asc = true; } else if (asc) asc = false; else sortCol = -1;
     render();
   });
   $('squadBody').addEventListener('click', e => {

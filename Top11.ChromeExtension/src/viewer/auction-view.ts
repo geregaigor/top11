@@ -70,18 +70,62 @@ function beepOnFresh(scan?: ScanResult): void {
   if (fresh.length) beep();
 }
 
+/** Звук «скани застрягли»: два низькі спадні тони — щоб не плутати з сигналом знахідки */
+function staleSound(times = 3): void {
+  try {
+    actx ??= new AudioContext();
+    if (actx.state === 'suspended') void actx.resume();
+    let t = actx.currentTime;
+    for (let i = 0; i < times; i++) {
+      for (const [f, d] of [[660, 0.3], [440, 0.45]] as const) {
+        const o = actx.createOscillator();
+        const g = actx.createGain();
+        o.type = 'triangle';
+        o.frequency.value = f;
+        o.connect(g).connect(actx.destination);
+        g.gain.setValueAtTime(0.3, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + d);
+        o.start(t);
+        o.stop(t + d);
+        t += d + 0.05;
+      }
+      t += 0.35;
+    }
+  } catch { /* ignore */ }
+}
+
 let lastScanTs = 0;
 let lastScanText = 'Сканів ще не було';
+/** Звук лише після живого скану в цій сесії сторінки — щоб не пищало від учорашнього скану при відкритті */
+let liveScanSeen = false;
+const STALE_REPEAT_MS = 2 * 60_000;
+const STALE_MAX_SOUNDS = 10;
+let staleSoundAt = 0;
+let staleSounds = 0;
+
+/** Скільки хвилин без сканів = застрягли */
+const STALE_MIN = 6;
+
+/** Повторюємо раз на 2 хв (не більше 10 разів), поки не прийде новий скан */
+function checkStale(stale: boolean): void {
+  if (!stale) { staleSoundAt = 0; staleSounds = 0; return; }
+  if (!liveScanSeen || !inputs.staleAlert?.checked) return;
+  if (staleSounds >= STALE_MAX_SOUNDS || Date.now() - staleSoundAt < STALE_REPEAT_MS) return;
+  staleSoundAt = Date.now();
+  staleSounds++;
+  staleSound();
+}
 
 /** Скільки хвилин тому прийшов список; якщо давно — підказка відкрити екран аукціону */
 function renderScanMeta(): void {
   const el = $('scanMeta');
   const min = lastScanTs ? Math.floor((Date.now() - lastScanTs) / 60000) : 0;
-  const stale = lastScanTs > 0 && min >= 6;
+  const stale = lastScanTs > 0 && min >= STALE_MIN;
   el.textContent = lastScanTs
     ? `${lastScanText} · ${min ? `${min} хв тому` : 'щойно'}${stale ? ' — список не оновлюється: відкрий у грі екран аукціону' : ''}`
     : lastScanText;
   el.classList.toggle('stale', stale);
+  checkStale(stale);
 }
 
 function renderScan(scan?: ScanResult): void {
@@ -211,6 +255,7 @@ export function initAuctionView(): void {
 
   // тест: і в грі, і тут (щоб одразу було видно, де звук працює)
   $('beep').onclick = () => { beep(); void send('beep'); };
+  $('staleTest').onclick = () => staleSound(1);
   $('dump').onclick = () => void send('dump');
 
   // Уся історія з сирими полями — в буфер обміну, щоб передати на аналіз
@@ -245,6 +290,7 @@ export function initAuctionView(): void {
   chrome.storage.onChanged.addListener(changes => {
     if ('lastScan' in changes) {
       const scan = changes.lastScan?.newValue as ScanResult | undefined;
+      if (scan) liveScanSeen = true;
       renderScan(scan);
       beepOnFresh(scan);
     }

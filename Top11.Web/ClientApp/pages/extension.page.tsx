@@ -8,7 +8,9 @@ declare global {
 }
 
 const CODE = '/ext/code';
-const EXT_NAME = 'Top11 Auction Watcher';
+const EXT_NAME = 'Top11Ext';
+/** Попередні назви — щоб оновлення поверх старої папки працювало */
+const EXT_NAMES = [EXT_NAME, 'Top11 Auction Watcher'];
 
 interface Published {
   version: string;
@@ -41,7 +43,7 @@ async function checkFolder(dir: FileSystemDirectoryHandle): Promise<string | nul
   if (names.includes('manifest.json')) {
     try {
       const m = JSON.parse(await (await (await dir.getFileHandle('manifest.json')).getFile()).text()) as { name?: string };
-      if (m.name === EXT_NAME) return null;
+      if (m.name && EXT_NAMES.includes(m.name)) return null;
       return `У цій папці інше розширення («${m.name ?? '?'}»). Вибери порожню папку.`;
     } catch { /* */ }
   }
@@ -161,7 +163,7 @@ export const ExtensionPage = defineComponent({
             </li>
             <li>Справа вгорі увімкни <b>«Режим розробника»</b> (<i>Developer mode</i>).</li>
             <li>Натисни <b>«Завантажити розпаковане розширення»</b> (<i>Load unpacked</i>) і вибери ту саму папку.</li>
-            <li>На картці <b>Top11 Auction Watcher</b> натисни <b>«Докладніше»</b> (<i>Details</i>) і увімкни
+            <li>На картці <b>{EXT_NAME}</b> натисни <b>«Докладніше»</b> (<i>Details</i>) і увімкни
               <b> «Дозволити скрипти користувача»</b> (<i>Allow User Scripts</i>). Без цього розширення не бачитиме гру.</li>
             <li>За бажанням: іконка пазла на панелі Chrome → шпилька біля Top11, щоб іконка <b>T</b> була завжди під рукою.</li>
           </ol>

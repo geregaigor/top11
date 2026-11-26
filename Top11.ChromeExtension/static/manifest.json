@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Top11 Auction Watcher",
+  "name": "Top11Ext",
   "version": "0.7.0",
-  "description": "Відстежує гравців на аукціоні Top Eleven за віком і якістю.",
+  "description": "Помічник для Top Eleven: аукціон, склад команди та інструменти Top11.",
   "minimum_chrome_version": "120",
   "permissions": [
     "storage",
@@ -19,7 +19,7 @@
     "http://*/*"
   ],
   "action": {
-    "default_title": "Top11"
+    "default_title": "Top11Ext"
   },
   "background": {
     "service_worker": "background.js"

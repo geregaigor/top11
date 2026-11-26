@@ -4,6 +4,9 @@ import type { AuctionPlayer } from '../shared/messages';
 
 const ID = 't11-overlay';
 const TALENT = 1.15;
+const HELP = 'Талант гравця визначається полем К (коефіцієнт лота) — множник швидкості тренування.\n'
+  + 'Діапазон: приблизно 0.80–1.20. К = 1.00 — звичайна швидкість, 1.15 — на 15% швидше, 0.90 — на 10% повільніше.\n'
+  + `Талант — К ≥ ${TALENT} (жовтим). Блідим — К < 0.95.`;
 let collapsed = false;
 try { collapsed = localStorage.getItem('t11-overlay-collapsed') === '1'; } catch { /* ignore */ }
 
@@ -40,12 +43,12 @@ export function renderOverlay(list: AuctionPlayer[], isMatch: (p: AuctionPlayer)
   const time = new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #262e3d;font-weight:700">
-      <span>Top11 · аукціон <span style="opacity:.6;font-weight:400">${list.length} · ${time}</span></span>
+      <span>Top11 · аукціон <span style="opacity:.6;font-weight:400">${list.length} · ${time}</span><span title="${esc(HELP)}" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:6px;border:1px solid #5fb3ff;border-radius:50%;color:#5fb3ff;font-size:10px;font-weight:700;cursor:help;vertical-align:1px">?</span></span>
       <span data-t11="toggle" style="cursor:pointer;padding:0 6px;font-size:14px" title="Згорнути">${collapsed ? '+' : '–'}</span>
     </div>
     <div data-t11="body" style="${collapsed ? 'display:none' : ''}">
       <table style="width:100%;border-collapse:collapse;color:#e6e9ef;font:inherit;background:transparent">
-        <tr style="opacity:.6;text-align:left"><th style="padding:3px 6px">Гравець</th><th>Вік</th><th title="ОБЩ">О</th><th style="text-align:right;padding-right:6px" title="Талант: ≥ 1.15">К</th></tr>
+        <tr style="opacity:.6;text-align:left"><th style="padding:3px 6px">Гравець</th><th>Вік</th><th title="ОБЩ">О</th><th style="text-align:right;padding-right:6px" title="${esc(HELP)}">К</th></tr>
         ${rows.map(p => {
           const k = p.lotFactor || 0;
           const tal = k >= TALENT;

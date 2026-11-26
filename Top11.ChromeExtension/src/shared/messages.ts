@@ -17,19 +17,22 @@ export interface Settings {
   keepAlive: boolean;
   /** Сигнал, коли в списку аукціону зʼявляється новий гравець під фільтр */
   sound: boolean;
+  /** Звук, якщо список аукціону не оновлювався 6 хв (скани застрягли) */
+  staleAlert: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   minAge: 18,
-  maxAge: 19,
+  maxAge: 21,
   minQuality: 0,
-  maxQuality: 30,
+  maxQuality: 60,
   noSpecial: true,
   singlePosition: true,
   minK: 0,
   overlay: true,
   keepAlive: true,
   sound: true,
+  staleAlert: true,
 };
 
 export interface AuctionPlayer {
@@ -81,6 +84,33 @@ export interface SquadPlayer {
 
 /** К (талант) гравців своєї команди: id гравця -> { k, ts }. Джерело — превʼю матчу (0x52), поле запису 25.1 */
 export type SquadK = Record<string, { k: number; ts: number }>;
+
+/** Гравець з превʼю матчу: як у складі + К (25.1), якщо є */
+export type PreviewPlayer = SquadPlayer & { k?: number };
+
+export interface PreviewTeam {
+  id: number;
+  name: string;
+  players: PreviewPlayer[];
+}
+
+/** Останнє відкрите превʼю матчу (0x52): обидві команди; mine — індекс своєї (-1, якщо склад ще невідомий) */
+export interface MatchPreview {
+  ts: number;
+  teams: PreviewTeam[];
+  mine: number;
+}
+
+/** Збережені суперники з превʼю: id команди -> склад з К (останнє превʼю цієї команди) */
+export interface SavedOpponent {
+  ts: number;
+  team: PreviewTeam;
+  /** Назва своєї команди в тому превʼю */
+  vs?: string;
+}
+export type SavedOpponents = Record<string, SavedOpponent>;
+/** Скільки суперників тримати (найстаріші видаляються) */
+export const MAX_OPPONENTS = 50;
 
 export interface SquadSnapshot {
   ts: number;
@@ -134,6 +164,7 @@ export type PageMessage =
   | { src: typeof PAGE_SRC; cmd: 'scan'; payload: ScanResult }
   | { src: typeof PAGE_SRC; cmd: 'squad'; payload: SquadSnapshot }
   | { src: typeof PAGE_SRC; cmd: 'squadK'; payload: SquadK }
+  | { src: typeof PAGE_SRC; cmd: 'matchPreview'; payload: MatchPreview }
   | { src: typeof PAGE_SRC; cmd: 'wsEvent'; payload: WsEvent }
   | { src: typeof PAGE_SRC; cmd: 'live'; payload: LiveStatus }
   | { src: typeof PAGE_SRC; cmd: 'openViewer' }

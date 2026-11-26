@@ -1,7 +1,7 @@
 // Isolated world: chrome.storage / runtime <-> сторінка (MAIN world) через postMessage.
 import {
-  BRIDGE_SRC, PAGE_SRC, loadHistory, loadState,
-  type BridgeMessage, type FramesReply, type LiveStatus, type PageMessage, type PopupCommand, type ScanResult, type ViewerRequest,
+  BRIDGE_SRC, MAX_OPPONENTS, PAGE_SRC, loadHistory, loadState,
+  type BridgeMessage, type SavedOpponents, type FramesReply, type LiveStatus, type PageMessage, type PopupCommand, type ScanResult, type ViewerRequest,
 } from '../shared/messages';
 
 /** Після ↻ розширення старий content script лишається на сторінці, але chrome.* в ньому вже мертві. */
@@ -105,6 +105,26 @@ window.addEventListener('message', (e: MessageEvent<PageMessage>) => {
       const { squadK } = await chrome.storage.local.get('squadK');
       await chrome.storage.local.set({ squadK: { ...((squadK as object | undefined) ?? {}), ...add } });
     }).catch(err => console.warn('[T11] squadK error', err));
+    return;
+  }
+  if (e.data.cmd === 'matchPreview') {
+    if (!alive()) return;
+    const mp = e.data.payload;
+    // суперник(и): усі команди, крім своєї (свою не знаємо — зберігаємо обидві)
+    const opp = mp.teams.filter((_, i) => i !== mp.mine);
+    const vs = mp.mine >= 0 ? mp.teams[mp.mine]?.name : undefined;
+    queue = queue.then(async () => {
+      const { opponents } = await chrome.storage.local.get('opponents');
+      const all: SavedOpponents = { ...((opponents as SavedOpponents | undefined) ?? {}) };
+      for (const team of opp) {
+        // К, який уже знали, не затираємо порожнім (у новому превʼю К гравця може не бути)
+        const prevK = new Map((all[String(team.id)]?.team.players ?? []).filter(p => p.k).map(p => [p.id, p.k]));
+        const players = team.players.map(p => (p.k || !prevK.has(p.id) ? p : { ...p, k: prevK.get(p.id) }));
+        all[String(team.id)] = { ts: mp.ts, team: { ...team, players }, vs };
+      }
+      const keep = Object.entries(all).sort((a, b) => b[1].ts - a[1].ts).slice(0, MAX_OPPONENTS);
+      await chrome.storage.local.set({ opponents: Object.fromEntries(keep), matchPreview: mp });
+    }).catch(err => console.warn('[T11] opponents error', err));
     return;
   }
   if (e.data.cmd === 'squad') {

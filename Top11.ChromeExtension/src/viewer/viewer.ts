@@ -5,6 +5,8 @@ import type { FrameDTO, FramesReply, ViewerRequest } from '../shared/messages';
 import { initSquadView } from './squad-view';
 import { initAuctionView } from './auction-view';
 import { findGameTab, forgetGameTab } from './game-tab';
+import { initSiteLink } from './site-link';
+import { initMatchView } from './match-view';
 
 const POLL_MS = 1500;
 const MAX_ROWS = 2000;
@@ -411,7 +413,7 @@ $('export').addEventListener('click', () => {
 });
 
 // ---------- Вкладки сторінки ----------
-const VIEWS = ['auction', 'squad', 'traffic'] as const;
+const VIEWS = ['auction', 'squad', 'match', 'traffic'] as const;
 type View = typeof VIEWS[number];
 
 /** Dev-режим: 5 кліків по версії на смужці (t11-dev у localStorage обгортки) або джерело «Локальна папка» */
@@ -441,6 +443,8 @@ try { saved = localStorage.getItem('view'); } catch { /* ignore */ }
 setView(VIEWS.includes(fromHash) ? fromHash : VIEWS.includes(saved as View) ? saved as View : 'auction');
 initSquadView();
 initAuctionView();
+initSiteLink();
+initMatchView();
 
 
 
